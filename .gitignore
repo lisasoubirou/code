@@ -1,0 +1,9 @@
+*.txt
+*.o
+*.pdf
+*.pyc
+*.png
+*.pptx
+build/
+*.json
+.vs/
