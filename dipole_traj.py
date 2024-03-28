@@ -128,7 +128,7 @@ def track(line, num_turns=1):
 # def compare_methods:
 
 if __name__ == "__main__":
-    file_input='/mnt/c/muco/class_geometry/para_RCS_ME.txt'
+    file_input='/mnt/c/muco/code/class_geometry/para_RCS_ME.txt'
     time_frac=0
     t_ref=0.5
     RCS = Geometry(file_input)
