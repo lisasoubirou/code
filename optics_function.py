@@ -107,13 +107,13 @@ def make_optics(file_input,time_frac,n_slice,option):
             i_BSC=pattern.index('BSC')
             BSC=xt.Bend(k0=list_hn[i_BSC],
                         h=list_hn[i_BSC],
-                        length=L_dip_path[0]
+                        length=L_dip_path[i_BSC]
                         # length=length_sc
                         )
     elif option == 'var_k':
         print('Option: var_k')
         i_BNC=pattern.index('BNC')
-        BSC=xt.Bend(k0=list_hn[i_BNC],
+        BNC=xt.Bend(k0=list_hn[i_BNC],
                         h=list_hn_ref[i_BNC],
                         length=L_dip_path_ref[i_BNC]
                         # length=length_sc
@@ -153,7 +153,8 @@ def make_optics(file_input,time_frac,n_slice,option):
     line_cell.particle_ref = xp.Particles(p0c=energy, #eV
                                         q0=1, mass0=xp.MUON_MASS_EV)
     line_cell.config.XTRACK_USE_EXACT_DRIFTS = True
-    line_cell.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
+    if n_slice > 0:
+        line_cell.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
 
 
     line_FODO=xt.Line(
@@ -256,7 +257,8 @@ def make_optics(file_input,time_frac,n_slice,option):
     line_ds.particle_ref = xp.Particles(p0c=energy, #eV
                                         q0=1, mass0=xp.MUON_MASS_EV)
     line_ds.config.XTRACK_USE_EXACT_DRIFTS = True
-    line_ds.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
+    if n_slice > 0:
+        line_ds.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
 
     # tw_ds_bf=line_ds.twiss( method='4d')
 
@@ -478,7 +480,7 @@ if __name__ == "__main__":
     file_input='/mnt/c/muco/code/class_geometry/para_RCS_ME.txt'
     RCS = Geometry(file_input)
     t_frac=0
-    n_k=21
+    n_k=0
     method='var_ref'
 
     line_cell,line_ds= make_optics(file_input,t_frac,n_k,method) 
@@ -502,14 +504,14 @@ if __name__ == "__main__":
     # plt.ylabel('delta [10-3] ')
     # plt.show()
     
-    print('TUNES')
-    print(f'RCS Qx: {tw_6d["qx"]*nb_arc:.3f}')
-    print(f'Arc Qx: {tw_6d["qx"]:.3f}')
-    print(f'RCS Qy: {tw_6d["qy"]*nb_arc:.3f}')
-    print(f'Arc Qy: {tw_6d["qy"]:.3f}')
-    print(f'Arc Qs: {tw_6d["qs"]:.4f}')
-    print(f'RCS Qs: {tw_6d["qs"]*nb_arc:.3f}')
-    print(f'MCF: {tw_6d["momentum_compaction_factor"]:.5f}')
+    # print('TUNES')
+    # print(f'RCS Qx: {tw_6d["qx"]*nb_arc:.3f}')
+    # print(f'Arc Qx: {tw_6d["qx"]:.3f}')
+    # print(f'RCS Qy: {tw_6d["qy"]*nb_arc:.3f}')
+    # print(f'Arc Qy: {tw_6d["qy"]:.3f}')
+    # print(f'Arc Qs: {tw_6d["qs"]:.4f}')
+    # print(f'RCS Qs: {tw_6d["qs"]*nb_arc:.3f}')
+    # print(f'MCF: {tw_6d["momentum_compaction_factor"]:.5f}')
 
     # Plot trajectory
     plt.figure()
