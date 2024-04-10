@@ -232,12 +232,15 @@ def make_optics(file_input,time_frac,n_slice,option):
     # plot_twiss_single(tw_match)
 
     # Dispersion suppressor lattice 
+    tr_elements_inv=[end]+[quad_d3,drift_r,cavity,drift_r,quad_f3,drift_s]+cell+[drift_s,quad_d2,drift_s
+                    ]+cell+[drift_s,quad_f2,drift_s]+cell+[drift_s,quad_d1,drift_s]+cell+[drift_s,quad_f1]+[beg]
+    tr_names_inv=['end']+['quad_d','drift_r','cavity','drift_r','quad_f','drift_s']+cell_name+[
+        'drift_s','quad_d','drift_s']+cell_name+['drift_s','quad_f','drift_s'
+        ]+cell_name+['drift_s','quad_d','drift_s']+cell_name+['drift_s','quad_f']+['beg']
     ad_2_elements=tr_elements[1:-1]
     ad_2_names=tr_names[1:-1]
-    ad_1_elements= tr_elements[1:-1]
-    ad_1_elements=ad_1_elements[::-1]
-    ad_1_names= tr_names[1:-1]
-    ad_1_names=ad_1_names[::-1]
+    ad_1_elements= tr_elements_inv[1:-1]
+    ad_1_names= tr_names_inv[1:-1]
 
     ds_elements=ad_1_elements+FODO_elements[1:]+FODO_elements*3+ad_2_elements+[end] 
     ds_names=ad_1_names+FODO_names[1:]+FODO_names*3+ad_2_names+['end'] 
