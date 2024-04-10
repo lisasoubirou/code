@@ -529,3 +529,20 @@ if __name__ == "__main__":
     plt.ylabel('x [m]')
     plt.legend()
     plt.show()
+
+#     #Plot layout of arc
+#     sv = line_layout.survey()
+#     plot = xplt.FloorPlot(
+#     sv,
+#     line_layout,
+#     projection="ZX",
+#     boxes={  # adjust box style for element names matching regex
+#         "BSC": dict(color="red",width=5),
+#         "BNC": dict(color="blue",width=5),
+#         "quad..." : dict(color="green",width=10),
+#         "sxt":dict(color="black",width=20)
+#     }
+# )
+#     plot.ax.set(ylim=(-50, 50))
+#     # plot.add_scale()
+#     plot.legend(loc="upper left")
