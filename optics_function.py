@@ -90,6 +90,7 @@ def make_optics(file_input,time_frac,n_slice,option):
     cavity=xt.Cavity(voltage=V, frequency=freq, lag=phi)
     # RF_acc=xt.ReferenceEnergyIncrease(Delta_p0c=energy_increment_per_arc/n_cav_arc)
     RF_acc=xt.ReferenceEnergyIncrease(Delta_p0c=0)
+    dz_acc=xt.ZetaShift(dzeta=0)
 
     beg = xt.Marker()
     end = xt.Marker()
@@ -254,8 +255,10 @@ def make_optics(file_input,time_frac,n_slice,option):
     line_ds.insert_element('sxt_d_2',sxt_d,at_s=tab_bf['s','quad_d_4'])
     line_ds.insert_element('sxt_f_1',sxt_f,at_s=tab_bf['s','quad_f_4'])
     line_ds.insert_element('sxt_f_2',sxt_f,at_s=tab_bf['s','quad_f_6'])
-    line_ds.insert_element('RF_acc', RF_acc, at_s=tab_bf['s','cavity']-1e-5)
-    line_ds.insert_element('RF_acc_1', RF_acc, at_s=tab_bf['s','cavity_1']+1e-5)
+    line_ds.insert_element('RF_acc', RF_acc, at=2)
+    line_ds.insert_element('RF_acc_1', RF_acc, at=-4)
+    line_ds.insert_element('dz_acc', dz_acc, at=3)
+    line_ds.insert_element('dz_acc_1', dz_acc, at=-4)
 
     line_ds.particle_ref = xp.Particles(p0c=energy, #eV
                                         q0=1, mass0=xp.MUON_MASS_EV)
@@ -343,12 +346,9 @@ def make_optics(file_input,time_frac,n_slice,option):
 
     h_rf = np.round(frequency_rf*tw_ds_4d.T_rev0*nb_arc) #data tw_ds on 1 arc
     Delta_p0c=energy_increment_per_arc/n_cav_arc
-    dz_acc=xt.ZetaShift(dzeta=-0.000497805162122214/2)
     line_ds.discard_tracker()
-    # line_ds.insert_element('dz_acc', dz_acc, at_s=tab['s','cavity'])
     line_ds['RF_acc'].Delta_p0c=Delta_p0c 
     line_ds['RF_acc_1'].Delta_p0c=Delta_p0c 
-    # line_ds.insert_element('dz_acc_1', dz_acc, at_s=tab['s','cavity_1'])
     line_ds.build_tracker()
 
     match_ds_6d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],

@@ -36,6 +36,7 @@ file_input='/mnt/c/muco/code/class_geometry/para_RCS_ME.txt'
 RCS = Geometry(file_input)
 file_seq = 'lattice_disp_suppr_6d.json'
 line=xt.Line.from_json(file_seq)
+
 line.particle_ref = xt.Particles(mass0=xp.MUON_MASS_EV, q0=1.,
                                     energy0=xp.MUON_MASS_EV + RCS.E_inj,
                                  )
@@ -43,30 +44,28 @@ tw_6d=line.twiss(method='6d', matrix_stability_tol=5e-3)
 
 tab=line.get_table()
 line.discard_tracker()
-
 pattern=RCS.pattern 
 i_BNC=pattern.index('BNC')
 i_BSC=pattern.index('BSC')
 
-# line.vars['t_turn_s']
-# line.vars['h_NC']=0
-# line.vars['h_SC']=0
-# line.vars['l_dip_NC']=0
-# line.vars['l_dip_SC']=0
-
 line._init_var_management()
 line.vars['t_turn_s']=0.
 
-coef=calc_dip_coef(file_input)
+coef=calc_dip_coef(file_input,t_ref)
 line.functions.h_nc_pol= lambda x: eval_horner(coef[0],x)
 line.functions.h_sc_pol= lambda x: eval_horner(coef[1],x)
 line.functions.l_nc_pol= lambda x: eval_horner(coef[2],x)
 line.functions.l_sc_pol= lambda x: eval_horner(coef[3],x)
+line.functions.path_diff_1cav= lambda x: -eval_horner(coef[4],x)/2
 
 line.vars['h_NC']=line.functions.h_nc_pol(line.vars['t_turn_s']/t_acc)
 line.vars['h_SC']=line.functions.h_sc_pol(line.vars['t_turn_s']/t_acc)
 line.vars['l_dip_NC']=line.functions.l_nc_pol(line.vars['t_turn_s']/t_acc)
 line.vars['l_dip_SC']=line.functions.l_sc_pol(line.vars['t_turn_s']/t_acc)
+line.vars['dz_rf']=line.functions.path_diff_1cav(line.vars['t_turn_s']/t_acc)
+
+line.element_refs['dz_acc'].dzeta=line.vars['dz_rf']
+line.element_refs['dz_acc_1'].dzeta=line.vars['dz_rf']
 
 h_ref_NC=RCS.hn(t_ref)[i_BNC]
 h_ref_SC=RCS.hn(t_ref)[i_BSC]
@@ -124,26 +123,26 @@ mon_sc1_en=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
 mon_sc1_ex=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
                         num_particles=n_part)
 
-# line.insert_element('m_sc0_en',mon_sc0_en,at_s=tab_sliced['s','en1'])
-# line.insert_element('m_sc0_mid',mon_sc0_mid,at_s=tab_sliced['s','BSC..10'])
-# line.insert_element('m_sc0_ex',mon_sc0_ex,at_s=tab_sliced['s','ex1'])
-# line.insert_element('m_nc0_en',mon_nc0_en,at_s=tab_sliced['s','en2'])
-# line.insert_element('m_nc0_mid',mon_nc0_mid,at_s=tab_sliced['s','BNC..10'])
-# line.insert_element('m_nc0_ex',mon_nc0_ex,at_s=tab_sliced['s','ex2'])
-# line.insert_element('m_sc1_en',mon_sc1_en,at_s=tab_sliced['s','en3'])
-# line.insert_element('m_sc1_mid',mon_sc1_mid,at_s=tab_sliced['s','BSC_1..10'])
-# line.insert_element('m_sc1_ex',mon_sc1_ex,at_s=tab_sliced['s','ex3'])
+line.insert_element('m_sc0_en',mon_sc0_en,at_s=tab_sliced['s','en1'])
+line.insert_element('m_sc0_mid',mon_sc0_mid,at_s=tab_sliced['s','BSC..10'])
+line.insert_element('m_sc0_ex',mon_sc0_ex,at_s=tab_sliced['s','ex1'])
+line.insert_element('m_nc0_en',mon_nc0_en,at_s=tab_sliced['s','en2'])
+line.insert_element('m_nc0_mid',mon_nc0_mid,at_s=tab_sliced['s','BNC..10'])
+line.insert_element('m_nc0_ex',mon_nc0_ex,at_s=tab_sliced['s','ex2'])
+line.insert_element('m_sc1_en',mon_sc1_en,at_s=tab_sliced['s','en3'])
+line.insert_element('m_sc1_mid',mon_sc1_mid,at_s=tab_sliced['s','BSC_1..10'])
+line.insert_element('m_sc1_ex',mon_sc1_ex,at_s=tab_sliced['s','ex3'])
 
 
-line.insert_element('m_sc0_en',mon_sc0_en,at_s=tab_sliced['s','en1_8'])
-line.insert_element('m_sc0_mid',mon_sc0_mid,at_s=tab_sliced['s','BSC_16..10'])
-line.insert_element('m_sc0_ex',mon_sc0_ex,at_s=tab_sliced['s','ex1_8'])
-line.insert_element('m_nc0_en',mon_nc0_en,at_s=tab_sliced['s','en2_8'])
-line.insert_element('m_nc0_mid',mon_nc0_mid,at_s=tab_sliced['s','BNC_8..10'])
-line.insert_element('m_nc0_ex',mon_nc0_ex,at_s=tab_sliced['s','ex2_8'])
-line.insert_element('m_sc1_en',mon_sc1_en,at_s=tab_sliced['s','en3_8'])
-line.insert_element('m_sc1_mid',mon_sc1_mid,at_s=tab_sliced['s','BSC_17..10'])
-line.insert_element('m_sc1_ex',mon_sc1_ex,at_s=tab_sliced['s','ex3_8'])
+# line.insert_element('m_sc0_en',mon_sc0_en,at_s=tab_sliced['s','en1_8'])
+# line.insert_element('m_sc0_mid',mon_sc0_mid,at_s=tab_sliced['s','BSC_16..10'])
+# line.insert_element('m_sc0_ex',mon_sc0_ex,at_s=tab_sliced['s','ex1_8'])
+# line.insert_element('m_nc0_en',mon_nc0_en,at_s=tab_sliced['s','en2_8'])
+# line.insert_element('m_nc0_mid',mon_nc0_mid,at_s=tab_sliced['s','BNC_8..10'])
+# line.insert_element('m_nc0_ex',mon_nc0_ex,at_s=tab_sliced['s','ex2_8'])
+# line.insert_element('m_sc1_en',mon_sc1_en,at_s=tab_sliced['s','en3_8'])
+# line.insert_element('m_sc1_mid',mon_sc1_mid,at_s=tab_sliced['s','BSC_17..10'])
+# line.insert_element('m_sc1_ex',mon_sc1_ex,at_s=tab_sliced['s','ex3_8'])
 
 def track_cell(line, num_turns=1):
     line.build_tracker()
@@ -168,13 +167,18 @@ def track_cell(line, num_turns=1):
 # plt.show()    
 
 ## Plotting check
-# t_test=np.linspace(0,1,20)
+# t_test=np.linspace(0,1,20)*t_acc
 # h_nc_test=[]
 # h_sc_test=[]
+# dz=[]
 # for tt in t_test:
 #     line.vars['t_turn_s'] = tt
 #     h_nc_test.append(line.vars['h_NC']._get_value())
 #     h_sc_test.append(line.vars['h_SC']._get_value())
+#     dz.append(line.vars['dz_rf']._get_value())
+# plt.figure()
+# plt.plot(t_test,dz)
+# plt.show()
 # plt.figure()
 # plt.plot(t_test,h_nc_test)
 # plt.show()
@@ -259,3 +263,29 @@ plt.show()
 # print('BNC',line['BNC'].k0)
 # print('BNC, vars',line.vars['h_NC']._get_value())
 # print('BNC geo', RCS.hn(0.5)[1])
+
+# Plot x function of turn in dipole
+plt.figure()
+plt.plot(mon_sc0_en.x[0],label='sc en')
+plt.plot(mon_sc0_mid.x[0],label='sc mid')
+plt.plot(mon_sc0_ex.x[0],label='sc ex')
+plt.xlabel('n_turns in arc')
+plt.ylabel('x [mm]')
+plt.legend()
+plt.show()
+plt.figure()
+plt.plot(mon_nc0_en.x[0],label='nc en')
+plt.plot(mon_nc0_mid.x[0],label='nc mid')
+plt.plot(mon_nc0_ex.x[0],label='nc ex')
+plt.xlabel('n_turns in arc')
+plt.ylabel('x [mm]')
+plt.legend()
+plt.show()
+plt.figure()
+plt.plot(mon_sc1_en.x[0],label='sc2 en')
+plt.plot(mon_sc1_mid.x[0],label='sc2 mid')
+plt.plot(mon_sc1_ex.x[0],label='sc2 ex')
+plt.xlabel('n_turns in arc')
+plt.ylabel('x [mm]')
+plt.legend()
+plt.show()
