@@ -13,6 +13,7 @@ import xpart as xp
 import sys
 sys.path.append('/mnt/c/muco')
 from class_geometry.class_geo import Geometry 
+from track_function import track
 import json
 
 plt.rc('axes', labelsize=12)    # fontsize of the x and y labels
@@ -79,7 +80,7 @@ def make_optics(file_input,time_frac,n_slice,option):
     quad_f3=xt.Multipole(knl=[0., 1/f], ksl=[0., 0.])
     quad_d3=xt.Multipole(knl=[0., -1/f], ksl=[0., 0.])
 
-    s_f=1/(f*0.5)*0
+    s_f=1/(f*0.5)
     s_d=-s_f
     sxt_d=xt.Multipole(knl=[0., 0.,s_d], ksl=[0., 0.,0.])
     sxt_f=xt.Multipole(knl=[0., 0.,s_f], ksl=[0., 0.,0.])
@@ -91,6 +92,10 @@ def make_optics(file_input,time_frac,n_slice,option):
     # RF_acc=xt.ReferenceEnergyIncrease(Delta_p0c=energy_increment_per_arc/n_cav_arc)
     RF_acc=xt.ReferenceEnergyIncrease(Delta_p0c=0)
     dz_acc=xt.ZetaShift(dzeta=0)
+
+    #Goal chroma
+    dqx_goal_arc=5/nb_arc
+    dqy_goal_arc=5/nb_arc
 
     beg = xt.Marker()
     end = xt.Marker()
@@ -174,223 +179,211 @@ def make_optics(file_input,time_frac,n_slice,option):
     dx_qf_fodo=tw_FODO['dx', 'quad_f'] 
     # plot_twiss(tw_FODO,line_FODO)
 
-    #Transfer
-    tr_elements= [beg]+[quad_f1 ,drift_s]+cell+[drift_s, quad_d1,drift_s]+cell+[drift_s,quad_f2,drift_s
-                ]+cell+[drift_s, quad_d2, drift_s]+cell+[drift_s, quad_f3,drift_r, cavity, drift_r, quad_d3]+[end]
-    tr_names=['beg']+['quad_f', 'drift_s']+cell_name+['drift_s', 'quad_d','drift_s']+cell_name+['drift_s',
-            'quad_f','drift_s']+cell_name+['drift_s', 'quad_d', 'drift_s']+cell_name+['drift_s', 'quad_f',
-                        'drift_r','cavity','drift_r', 'quad_d']+['end']
+    # #Transfer
+    # tr_elements= [beg]+[quad_f1 ,drift_s]+cell+[drift_s, quad_d1,drift_s]+cell+[drift_s,quad_f2,drift_s
+    #             ]+cell+[drift_s, quad_d2, drift_s]+cell+[drift_s, quad_f3,drift_r, cavity, drift_r, quad_d3]+[end]
+    # tr_names=['beg']+['quad_f', 'drift_s']+cell_name+['drift_s', 'quad_d','drift_s']+cell_name+['drift_s',
+    #         'quad_f','drift_s']+cell_name+['drift_s', 'quad_d', 'drift_s']+cell_name+['drift_s', 'quad_f',
+    #                     'drift_r','cavity','drift_r', 'quad_d']+['end']
 
-    line_tr=xt.Line(
-        elements=tr_elements,
-        element_names=tr_names)
-    line_tr.particle_ref = xp.Particles(p0c=energy, #eV
-                                        q0=1, mass0=xp.MUON_MASS_EV)
-    line_tr.config.XTRACK_USE_EXACT_DRIFTS = True
+    # line_tr=xt.Line(
+    #     elements=tr_elements,
+    #     element_names=tr_names)
+    # line_tr.particle_ref = xp.Particles(p0c=energy, #eV
+    #                                     q0=1, mass0=xp.MUON_MASS_EV)
+    # line_tr.config.XTRACK_USE_EXACT_DRIFTS = True
 
-    #Matches FODO lattices to the transfer line: on first quad of the transfer == output optics of FODO
-    tw_init_FODO = tw_FODO.get_twiss_init(0)
-    tw_init_FODO.element_name = 'beg'
-    tw_tr=line_tr.twiss(start=line_tr.element_names[0],end='_end_point', method='4d',
-                        init=tw_init_FODO
-                        )
+    # #Matches FODO lattices to the transfer line: on first quad of the transfer == output optics of FODO
+    # tw_init_FODO = tw_FODO.get_twiss_init(0)
+    # tw_init_FODO.element_name = 'beg'
+    # tw_tr=line_tr.twiss(start=line_tr.element_names[0],end='_end_point', method='4d',
+    #                     init=tw_init_FODO
+    #                     )
 
-    #Init of variables to be varied
-    line_tr._init_var_management()
-    line_tr.vars['k_f0'] = 1/f
-    line_tr.vars['k_d1'] = -1/f
-    line_tr.vars['k_f1'] = 1/f
-    line_tr.vars['k_d2'] = -1/f
-    line_tr.vars['k_f2'] = 1/f
-    line_tr.vars['k_d3'] = -1/f/2   #Half quad at the beginning and end of line_ds
+    # #Init of variables to be varied
+    # line_tr._init_var_management()
+    # line_tr.vars['k_f0'] = 1/f
+    # line_tr.vars['k_d1'] = -1/f
+    # line_tr.vars['k_f1'] = 1/f
+    # line_tr.vars['k_d2'] = -1/f
+    # line_tr.vars['k_f2'] = 1/f
+    # line_tr.vars['k_d3'] = -1/f/2   #Half quad at the beginning and end of line_ds
 
-    line_tr.element_refs['quad_f'].knl[1] = line_tr.vars['k_f0']
-    line_tr.element_refs['quad_d'].knl[1] = line_tr.vars['k_d1']
-    line_tr.element_refs['quad_f_1'].knl[1] = line_tr.vars['k_f1']
-    line_tr.element_refs['quad_d_1'].knl[1] = line_tr.vars['k_d2']
-    line_tr.element_refs['quad_f_2'].knl[1] = line_tr.vars['k_f2']
-    line_tr.element_refs['quad_d_2'].knl[1] = line_tr.vars['k_d3']
+    # line_tr.element_refs['quad_f'].knl[1] = line_tr.vars['k_f0']
+    # line_tr.element_refs['quad_d'].knl[1] = line_tr.vars['k_d1']
+    # line_tr.element_refs['quad_f_1'].knl[1] = line_tr.vars['k_f1']
+    # line_tr.element_refs['quad_d_1'].knl[1] = line_tr.vars['k_d2']
+    # line_tr.element_refs['quad_f_2'].knl[1] = line_tr.vars['k_f2']
+    # line_tr.element_refs['quad_d_2'].knl[1] = line_tr.vars['k_d3']
 
-    # Matching
-    match_tr=line_tr.match(
-                start='beg',
-                end='_end_point', 
-                init=tw_init_FODO,
-                vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
-                                step=1e-8,
-                                tag='quad'),
-                targets=[xt.TargetSet(dx=0,dpx=0,alfx=0,alfy=0, at='end',tol=1e-9)],
-                # verbose=True
-                )
-    print('RESULTS FROM TR MATCHING')
-    match_tr.target_status()
-    match_tr.vary_status()
-
-    #Calculate twiss after matching
-    tw_match=line_tr.twiss(start=line_tr.element_names[0],end='_end_point', method='4d',
-                        init=tw_init_FODO
-                        )
-    # plot_twiss_single(tw_match)
-
-    # Dispersion suppressor lattice 
-    tr_elements_inv=[end]+[quad_d3,drift_r,cavity,drift_r,quad_f3,drift_s]+cell+[drift_s,quad_d2,drift_s
-                    ]+cell+[drift_s,quad_f2,drift_s]+cell+[drift_s,quad_d1,drift_s]+cell+[drift_s,quad_f1]+[beg]
-    tr_names_inv=['end']+['quad_d','drift_r','cavity','drift_r','quad_f','drift_s']+cell_name+[
-        'drift_s','quad_d','drift_s']+cell_name+['drift_s','quad_f','drift_s'
-        ]+cell_name+['drift_s','quad_d','drift_s']+cell_name+['drift_s','quad_f']+['beg']
-    ad_2_elements=tr_elements[1:-1]
-    ad_2_names=tr_names[1:-1]
-    ad_1_elements= tr_elements_inv[1:-1]
-    ad_1_names= tr_names_inv[1:-1]
-
-    ds_elements=ad_1_elements+FODO_elements[1:]+FODO_elements*3+ad_2_elements+[end] 
-    ds_names=ad_1_names+FODO_names[1:]+FODO_names*3+ad_2_names+['end'] 
-
-    line_ds=xt.Line(
-        elements=ds_elements,
-        element_names=ds_names)
-
-    tab_bf=line_ds.get_table()
-    line_ds.insert_element('sxt_d_1',sxt_d,at_s=tab_bf['s','quad_d_2'])
-    line_ds.insert_element('sxt_d_2',sxt_d,at_s=tab_bf['s','quad_d_4'])
-    line_ds.insert_element('sxt_f_1',sxt_f,at_s=tab_bf['s','quad_f_4'])
-    line_ds.insert_element('sxt_f_2',sxt_f,at_s=tab_bf['s','quad_f_6'])
-    line_ds.insert_element('RF_acc', RF_acc, at=2)
-    line_ds.insert_element('RF_acc_1', RF_acc, at=-4)
-    line_ds.insert_element('dz_acc', dz_acc, at=3)
-    line_ds.insert_element('dz_acc_1', dz_acc, at=-4)
-
-    line_ds.particle_ref = xp.Particles(p0c=energy, #eV
-                                        q0=1, mass0=xp.MUON_MASS_EV)
-    line_ds.config.XTRACK_USE_EXACT_DRIFTS = True
-    if n_slice > 0:
-        line_ds.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
-
-    # tw_ds_bf=line_ds.twiss( method='4d')
-
-    line_ds._init_var_management()
-    #Set knobs to be varied
-    line_ds.vars['k_f0'] = line_ds['quad_f_2'].knl[1]
-    line_ds.vars['k_d1'] = line_ds['quad_d_2'].knl[1]
-    line_ds.vars['k_f1'] = line_ds['quad_f_1'].knl[1]
-    line_ds.vars['k_d2'] = line_ds['quad_d_1'].knl[1]
-    line_ds.vars['k_f2'] = line_ds['quad_f'].knl[1]
-    line_ds.vars['k_d3'] = line_ds['quad_d'].knl[1]
-    line_ds.vars['s_d'] = -1/(f*0.5)*0
-    line_ds.vars['s_f'] = 1/(f*0.5)*0
-
-    #Attach knobs to elements
-    line_ds.element_refs['quad_f_2'].knl[1] = line_ds.vars['k_f0']
-    line_ds.element_refs['quad_d_2'].knl[1] = line_ds.vars['k_d1']
-    line_ds.element_refs['quad_f_1'].knl[1] = line_ds.vars['k_f1']
-    line_ds.element_refs['quad_d_1'].knl[1] = line_ds.vars['k_d2']
-    line_ds.element_refs['quad_f'].knl[1] = line_ds.vars['k_f2']
-    line_ds.element_refs['quad_d'].knl[1] = line_ds.vars['k_d3']
-
-    line_ds.element_refs['quad_f_6'].knl[1] = line_ds.vars['k_f0']
-    line_ds.element_refs['quad_d_7'].knl[1] = line_ds.vars['k_d1']
-    line_ds.element_refs['quad_f_7'].knl[1] = line_ds.vars['k_f1']
-    line_ds.element_refs['quad_d_8'].knl[1] = line_ds.vars['k_d2']
-    line_ds.element_refs['quad_f_8'].knl[1] = line_ds.vars['k_f2']
-    line_ds.element_refs['quad_d_9'].knl[1] = line_ds.vars['k_d3']
-
-    line_ds.element_refs['sxt_d_1'].knl[2] = line_ds.vars['s_d']
-    line_ds.element_refs['sxt_f_1'].knl[2] = line_ds.vars['s_f']
-    line_ds.element_refs['sxt_d_2'].knl[2] = line_ds.vars['s_d']
-    line_ds.element_refs['sxt_f_2'].knl[2] = line_ds.vars['s_f']
-
-    match_ds_4d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
-                                step=1e-8,
-                                tag='quad'),
-                targets=[
-                        xt.Target(tar='dx', at='end', value=0., tol=1e-9,tag='DS'),
-                        xt.TargetSet(betx=betx_qd_fodo,bety=bety_qd_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
-                        xt.TargetSet(qx=2.60, qy=2.23, tol=1e-3, tag='tune')
-                        ],
-                #solve=False,
-                method='4d',
-                # verbose=True
-                )
-    print('MATCHING QUAD DS 4D')
-    match_ds_4d.target_status()
-    match_ds_4d.vary_status()
-
-    # match_ds_4d=line_ds.match(vary=xt.VaryList(['s_d','s_f'],
+    # # Matching
+    # match_tr=line_tr.match(
+    #             start='beg',
+    #             end='_end_point', 
+    #             init=tw_init_FODO,
+    #             vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
     #                             step=1e-8,
-    #                             tag='sxt'),
+    #                             tag='quad'),
+    #             targets=[xt.TargetSet(dx=0,dpx=0,alfx=0,alfy=0, at='end',tol=1e-9)],
+    #             # verbose=True
+    #             )
+    # print('RESULTS FROM TR MATCHING')
+    # match_tr.target_status()
+    # match_tr.vary_status()
+
+    # #Calculate twiss after matching
+    # tw_match=line_tr.twiss(start=line_tr.element_names[0],end='_end_point', method='4d',
+    #                     init=tw_init_FODO
+    #                     )
+    # # plot_twiss_single(tw_match)
+
+    # # Dispersion suppressor lattice 
+    # tr_elements_inv=[end]+[quad_d3,drift_r,cavity,drift_r,quad_f3,drift_s]+cell+[drift_s,quad_d2,drift_s
+    #                 ]+cell+[drift_s,quad_f2,drift_s]+cell+[drift_s,quad_d1,drift_s]+cell+[drift_s,quad_f1]+[beg]
+    # tr_names_inv=['end']+['quad_d','drift_r','cavity','drift_r','quad_f','drift_s']+cell_name+[
+    #     'drift_s','quad_d','drift_s']+cell_name+['drift_s','quad_f','drift_s'
+    #     ]+cell_name+['drift_s','quad_d','drift_s']+cell_name+['drift_s','quad_f']+['beg']
+    # ad_2_elements=tr_elements[1:-1]
+    # ad_2_names=tr_names[1:-1]
+    # ad_1_elements= tr_elements_inv[1:-1]
+    # ad_1_names= tr_names_inv[1:-1]
+
+    # ds_elements=ad_1_elements+FODO_elements[1:]+FODO_elements*3+ad_2_elements+[end] 
+    # ds_names=ad_1_names+FODO_names[1:]+FODO_names*3+ad_2_names+['end'] 
+
+    # line_ds=xt.Line(
+    #     elements=ds_elements,
+    #     element_names=ds_names)
+
+    # tab_bf=line_ds.get_table()
+    # line_ds.insert_element('sxt_d_1',sxt_d,at_s=tab_bf['s','quad_d_2'])
+    # line_ds.insert_element('sxt_d_2',sxt_d,at_s=tab_bf['s','quad_d_4'])
+    # line_ds.insert_element('sxt_f_1',sxt_f,at_s=tab_bf['s','quad_f_4'])
+    # line_ds.insert_element('sxt_f_2',sxt_f,at_s=tab_bf['s','quad_f_6'])
+    # line_ds.insert_element('RF_acc', RF_acc, at=2)
+    # line_ds.insert_element('RF_acc_1', RF_acc, at=-4)
+    # line_ds.insert_element('dz_acc', dz_acc, at=3)
+    # line_ds.insert_element('dz_acc_1', dz_acc, at=-4)
+
+    # line_ds.particle_ref = xp.Particles(p0c=energy, #eV
+    #                                     q0=1, mass0=xp.MUON_MASS_EV)
+    # line_ds.config.XTRACK_USE_EXACT_DRIFTS = True
+    # if n_slice > 0:
+    #     line_ds.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
+
+    # # tw_ds_bf=line_ds.twiss( method='4d')
+
+    # line_ds._init_var_management()
+    # #Set knobs to be varied
+    # line_ds.vars['k_f0'] = line_ds['quad_f_2'].knl[1]
+    # line_ds.vars['k_d1'] = line_ds['quad_d_2'].knl[1]
+    # line_ds.vars['k_f1'] = line_ds['quad_f_1'].knl[1]
+    # line_ds.vars['k_d2'] = line_ds['quad_d_1'].knl[1]
+    # line_ds.vars['k_f2'] = line_ds['quad_f'].knl[1]
+    # line_ds.vars['k_d3'] = line_ds['quad_d'].knl[1]
+    # line_ds.vars['s_d'] = -1/(f*0.5)*8
+    # line_ds.vars['s_f'] = 1/(f*0.25)*8
+
+    # #Attach knobs to elements
+    # line_ds.element_refs['quad_f_2'].knl[1] = line_ds.vars['k_f0']
+    # line_ds.element_refs['quad_d_2'].knl[1] = line_ds.vars['k_d1']
+    # line_ds.element_refs['quad_f_1'].knl[1] = line_ds.vars['k_f1']
+    # line_ds.element_refs['quad_d_1'].knl[1] = line_ds.vars['k_d2']
+    # line_ds.element_refs['quad_f'].knl[1] = line_ds.vars['k_f2']
+    # line_ds.element_refs['quad_d'].knl[1] = line_ds.vars['k_d3']
+
+    # line_ds.element_refs['quad_f_6'].knl[1] = line_ds.vars['k_f0']
+    # line_ds.element_refs['quad_d_7'].knl[1] = line_ds.vars['k_d1']
+    # line_ds.element_refs['quad_f_7'].knl[1] = line_ds.vars['k_f1']
+    # line_ds.element_refs['quad_d_8'].knl[1] = line_ds.vars['k_d2']
+    # line_ds.element_refs['quad_f_8'].knl[1] = line_ds.vars['k_f2']
+    # line_ds.element_refs['quad_d_9'].knl[1] = line_ds.vars['k_d3']
+
+    # line_ds.element_refs['sxt_d_1'].knl[2] = line_ds.vars['s_d']
+    # line_ds.element_refs['sxt_f_1'].knl[2] = line_ds.vars['s_f']
+    # line_ds.element_refs['sxt_d_2'].knl[2] = line_ds.vars['s_d']
+    # line_ds.element_refs['sxt_f_2'].knl[2] = line_ds.vars['s_f']
+
+    # match_ds_4d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
+    #                             step=1e-8,
+    #                             tag='quad'),
     #             targets=[
-    #                     xt.TargetSet(qx=2.60, qy=2.23, tol=1e-6, tag='tune'),
-    #                     xt.TargetSet(dqx=0, dqy=0, tol=1e-6, tag='chroma')],
+    #                     xt.Target(tar='dx', at='end', value=0., tol=1e-9,tag='DS'),
+    #                     xt.TargetSet(betx=betx_qd_fodo,bety=bety_qd_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
+    #                     xt.TargetSet(qx=2.60, qy=2.23, tol=1e-3, tag='tune')
+    #                     ],
     #             # solve=False,
     #             method='4d',
     #             # verbose=True
     #             )
-    # print('MATCHING SXT DS 4D')
+
+    # print('MATCHING QUAD DS 4D')
     # match_ds_4d.target_status()
     # match_ds_4d.vary_status()
+    # tw_ds_4d=line_ds.twiss( method='4d')
 
-    tw_ds_4d=line_ds.twiss( method='4d')
+    # #Import line to json
+    # # line_ds.to_json('lattice_disp_suppr.json') 
 
-    #Import line to json
-    # line_ds.to_json('lattice_disp_suppr.json') 
+    # # Cavity settings
+    # frequency = np.round(frequency_rf*tw_ds_4d.T_rev0)/tw_ds_4d.T_rev0
+    # line_ds['cavity'].frequency=frequency
+    # line_ds['cavity'].lag=phase
+    # line_ds['cavity'].voltage=volt_cav
+    # line_ds['cavity_1'].frequency=frequency
+    # line_ds['cavity_1'].lag=phase
+    # line_ds['cavity_1'].voltage=volt_cav
+    # tab = line_ds.get_table()
 
-    # Cavity settings
-    frequency = np.round(frequency_rf*tw_ds_4d.T_rev0)/tw_ds_4d.T_rev0
-    line_ds['cavity'].frequency=frequency
-    line_ds['cavity'].lag=phase
-    line_ds['cavity'].voltage=volt_cav
-    line_ds['cavity_1'].frequency=frequency
-    line_ds['cavity_1'].lag=phase
-    line_ds['cavity_1'].voltage=volt_cav
-    tab = line_ds.get_table()
+    # h_rf = np.round(frequency_rf*tw_ds_4d.T_rev0*nb_arc) #data tw_ds on 1 arc
+    # Delta_p0c=energy_increment_per_arc/n_cav_arc
+    # line_ds.discard_tracker()
+    # line_ds['RF_acc'].Delta_p0c=Delta_p0c 
+    # line_ds['RF_acc_1'].Delta_p0c=Delta_p0c 
+    # line_ds.build_tracker()
 
-    h_rf = np.round(frequency_rf*tw_ds_4d.T_rev0*nb_arc) #data tw_ds on 1 arc
-    Delta_p0c=energy_increment_per_arc/n_cav_arc
-    line_ds.discard_tracker()
-    line_ds['RF_acc'].Delta_p0c=Delta_p0c 
-    line_ds['RF_acc_1'].Delta_p0c=Delta_p0c 
-    line_ds.build_tracker()
-
-    match_ds_6d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
-                                step=1e-8,
-                                tag='quad'),
-                targets=[xt.TargetSet(dx=0, at='end', tol=1e-9,tag='DS'),
-                        # xt.TargetSet(betx=betx_fodo,bety=bety_fodo,dx=dx_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
-                        xt.TargetSet(qx=2.60, qy=2.23, tol=1e-6, tag='tune')],
-                method='6d',
-                matrix_stability_tol=5e-3,
-                # verbose=True
-                )
-    print('MATCHING QUAD DS 6D')
-    match_ds_6d.target_status()
-    match_ds_6d.vary_status()
-
-    # match_ds_6d=line_ds.match(vary=xt.VaryList(['s_d','s_f'],
-    #                         step=1e-8,
-    #                         tag='sxt'),
-    #             targets=[xt.TargetSet(qx=2.60, qy=2.23, tol=1e-6, tag='tune'),
-    #                     xt.TargetSet(dqx=0, dqy=0, tol=1e-6, tag='chroma')],
-    #             #solve=False,
+    # match_ds_6d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
+    #                             step=1e-8,
+    #                             tag='quad'),
+    #             targets=[xt.TargetSet(dx=0, at='end', tol=1e-9,tag='DS'),
+    #                     # xt.TargetSet(betx=betx_fodo,bety=bety_fodo,dx=dx_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
+    #                     xt.TargetSet(qx=2.60, qy=2.23, tol=1e-6, tag='tune')],
     #             method='6d',
     #             matrix_stability_tol=5e-3,
-    #             #verbose=True
+    #             # verbose=True
     #             )
-    # print('RESULTS SXT DS MATCH 6D')
+    # print('MATCHING QUAD DS 6D')
     # match_ds_6d.target_status()
     # match_ds_6d.vary_status()
 
-    tw_ds_6d=line_ds.twiss(method='6d', matrix_stability_tol=5e-3)
-    # plot_twiss_single(tw_ds_6d)
-    # line_ds.to_json('lattice_disp_suppr_6d.json')
+    # match_ds_6d_sxt=line_ds.match(vary=xt.VaryList(['s_d','s_f'],
+    #                         step=1e-5,
+    #                         tag='sxt'),
+    #             targets=[
+    #                 # xt.TargetSet(qx=2.60, qy=2.23, tol=1e-6, tag='tune'),
+    #                     xt.TargetSet(dqx=dqx_goal_arc, dqy=dqy_goal_arc, tol=1e-6, tag='chroma')],
+    #             solve=False,
+    #             method='6d',
+    #             matrix_stability_tol=5e-3,
+    #             # verbose=True
+    #             )
+    # match_ds_6d_sxt.step(20)
+    # print('RESULTS SXT DS MATCH 6D')
+    # match_ds_6d_sxt.target_status()
+    # match_ds_6d_sxt.vary_status()
 
-    print('GLOBAL PARAMETER')
-    print('MCF=', round(tw_ds_6d['momentum_compaction_factor'], 6))
-    print('Qx=', round(tw_ds_6d['qx'], 5))
-    print('Qy', round(tw_ds_6d['qy'], 5))
-    print('dqx', round(tw_ds_6d['dqx'], 2))
-    print('dqy', round(tw_ds_6d['dqy'], 2))
+    # tw_ds_6d=line_ds.twiss(method='6d', matrix_stability_tol=5e-3)
+    # # plot_twiss_single(tw_ds_6d)
+    # # line_ds.to_json('lattice_disp_suppr_6d.json')
 
-    return(line_cell,line_ds)#tw_ds_4d,tw_ds_6d) 
+    # print('GLOBAL PARAMETER')
+    # print('MCF=', round(tw_ds_6d['momentum_compaction_factor'], 6))
+    # print('Qx=', round(tw_ds_6d['qx'], 5))
+    # print('Qy', round(tw_ds_6d['qy'], 5))
+    # print('dqx', round(tw_ds_6d['dqx'], 2))
+    # print('dqy', round(tw_ds_6d['dqy'], 2))
+
+    return(line_cell,line_cell)#,line_ds)#tw_ds_4d,tw_ds_6d) 
 
 def plot_twiss(tw,line):
     plt.figure(figsize=(12, 12))
@@ -468,16 +461,6 @@ def plot_twiss_diff(tw_6d,tw_4d,line):
     plt.legend(loc='upper right')
     plt.show()
 
-def track(line, num_turns=1):
-    line.build_tracker()
-    part=line.build_particles()
-    if num_turns==1:
-        line.track(part,num_turns=1, turn_by_turn_monitor='ONE_TURN_EBE')
-    else:
-        line.track(part,num_turns=num_turns, turn_by_turn_monitor=True)
-    rec=line.record_last_track
-    return (rec)
-
 if __name__ == "__main__":
     #Call class_geo
     file_input='/mnt/c/muco/code/class_geometry/para_RCS_ME.txt'
@@ -488,7 +471,7 @@ if __name__ == "__main__":
 
     line_cell,line_ds= make_optics(file_input,t_frac,n_k,method) 
     survey_cell=line_cell.survey(theta0=RCS.cell_angle/4)
-    rec_cell=track(line_cell)
+    rec_cell=track(line_cell,var=False)
     # tw_4d=line_ds.twiss(method='4d')
     # tw_6d=line_ds.twiss(method='6d', matrix_stability_tol=5e-3)
     # plot_twiss_single(tw_4d)
@@ -517,18 +500,18 @@ if __name__ == "__main__":
     # print(f'MCF: {tw_6d["momentum_compaction_factor"]:.5f}')
 
     # Plot trajectory
-    plt.figure()
-    tab=line_cell.get_table()
-    plt.plot(survey_cell['s'], survey_cell['X']+rec_cell.x[0], label='Inj')
-    for i, el in enumerate(line_cell.element_names):
-        if 'en' in el:
-            plt.axvline(x=tab['s',el], color='grey', linestyle='--')
-        if 'ex' in el:
-            plt.axvline(x=tab['s',el], color='grey', linestyle='--')
-    plt.xlabel('s [m]')
-    plt.ylabel('x [m]')
-    plt.legend()
-    plt.show()
+    # plt.figure()
+    # tab=line_cell.get_table()
+    # plt.plot(survey_cell['s'], survey_cell['X']+rec_cell.x[0], label='Inj')
+    # for i, el in enumerate(line_cell.element_names):
+    #     if 'en' in el:
+    #         plt.axvline(x=tab['s',el], color='grey', linestyle='--')
+    #     if 'ex' in el:
+    #         plt.axvline(x=tab['s',el], color='grey', linestyle='--')
+    # plt.xlabel('s [m]')
+    # plt.ylabel('x [m]')
+    # plt.legend()
+    # plt.show()
 
 #     #Plot layout of arc
 #     sv = line_layout.survey()
@@ -546,3 +529,22 @@ if __name__ == "__main__":
 #     plot.ax.set(ylim=(-50, 50))
 #     # plot.add_scale()
 #     plot.legend(loc="upper left")
+
+    # line_cell_ext,line_ds_ext= make_optics(file_input,1,n_k,method) 
+    # survey_cell_ext=line_cell_ext.survey(theta0=RCS.cell_angle/4)
+    # rec_cell_ext=track(line_cell_ext,var=False)
+
+    # tab=line_cell_ext.get_table()
+    # plt.figure()
+    # plt.plot(survey_cell['s'], survey_cell['X'], label='Inj')
+    # plt.plot(survey_cell_ext['s'], survey_cell_ext['X'], label='Ext')
+    # plt.axvline(x=tab['s','en1'], color='grey', linestyle='--')
+    # plt.axvline(x=tab['s','ex1'], color='grey', linestyle='--')
+    # plt.axvline(x=tab['s','en2'], color='grey', linestyle='--')
+    # plt.axvline(x=tab['s','ex2'], color='grey', linestyle='--')
+    # plt.axvline(x=tab['s','en3'], color='grey', linestyle='--')
+    # plt.axvline(x=tab['s','ex3'], color='grey', linestyle='--')
+    # plt.text(tab['s','BSC..10'], 0.10, 'SC', horizontalalignment='center')
+    # plt.text(tab['s','BNC..10'], 0.10, 'NC', horizontalalignment='center')
+    # plt.text(tab['s','BSC_1..10'], 0.10, 'SC', horizontalalignment='center')
+
