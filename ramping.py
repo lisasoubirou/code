@@ -12,20 +12,21 @@ import xobjects as xo
 import xtrack as xt
 import xpart as xp
 import sys
-sys.path.append('/mnt/c/muco')
+sys.path.append('/mnt/c/muco/code')
 from class_geometry.class_geo import Geometry 
 from optics_function import plot_twiss
 from interpolation import calc_dip_coef,eval_horner
 from track_function import track_cell,track,distribution_lost_turn,distribution_lost_turn_long
 from track_function import compute_emit_x_n, compute_emit_y_n, compute_emit_s, compute_sigma_z, compute_x_mean, compute_y_mean,calculate_transmission
 import json
+from optics_function import make_optics
 
 from scipy.interpolate import CubicSpline
 
 plt.rc('axes', labelsize=12)    # fontsize of the x and y labels
 plt.rc('xtick', labelsize=11)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=11)    # fontsize of the tick labels
-plt.rc('legend', fontsize=12)    # legend fontsize
+plt.rc('legend', fontsize=10)    # legend fontsize
 
 #Constants
 muon_mass_kg=sc.physical_constants['muon mass'][0]
@@ -104,8 +105,8 @@ line.vars['l_dip_NC']=line.functions.l_nc_pol(line.vars['t_turn_s']/t_acc)
 line.vars['l_dip_SC']=line.functions.l_sc_pol(line.vars['t_turn_s']/t_acc)
 line.vars['dz_rf']=line.functions.path_diff_1cav(line.vars['t_turn_s']/t_acc)
 
-line.element_refs['dz_acc'].dzeta=line.vars['dz_rf']
-line.element_refs['dz_acc_1'].dzeta=line.vars['dz_rf']
+# line.element_refs['dz_acc'].dzeta=line.vars['dz_rf']
+# line.element_refs['dz_acc_1'].dzeta=line.vars['dz_rf']
 
 h_ref_NC=RCS.hn(t_ref)[i_BNC]
 h_ref_SC=RCS.hn(t_ref)[i_BSC]
@@ -113,8 +114,8 @@ l_dip_ref_NC=RCS.L_dip_path(t_ref)[i_BNC]
 l_dip_ref_SC=RCS.L_dip_path(t_ref)[i_BSC]
 
 #Errors dipole
-b3=0.3
-b5=-0.8
+b3=0
+b5=0
 r_rad=0.01
 
 # Time dependent knobs on dipole parameters
@@ -148,12 +149,38 @@ for el in tab.rows[tab.element_type == 'DipoleEdge'].name:
             line.element_refs[el].k=line.vars['h_SC']
     elif 'en2' or 'ex2' in el:
             line.element_refs[el].k=line.vars['h_NC']
-        
+
+line.vars['t_turn_s']=0.5*t_acc
+f=RCS.cell_length/(4*np.sin(np.pi/2/2)) #Focusing strength of quadrupole
+line.vars['s_d'] = -1/(f*0.5)*8
+line.vars['s_f'] = 1/(f*0.25)*8
+line.element_refs['sxt_d_1'].knl[2] = line.vars['s_d']
+line.element_refs['sxt_f_1'].knl[2] = line.vars['s_f']
+line.element_refs['sxt_d_2'].knl[2] = line.vars['s_d']
+line.element_refs['sxt_f_2'].knl[2] = line.vars['s_f']
+dqx_goal_arc=5/nb_arc
+dqy_goal_arc=5/nb_arc
+match_ds_6d_sxt=line.match(vary=xt.VaryList(['s_d','s_f'],
+                            step=1e-5,
+                            tag='sxt'),
+                targets=[
+                        xt.TargetSet(dqx=dqx_goal_arc, dqy=dqy_goal_arc, tol=1e-6, tag='chroma')],
+                solve=False,
+                method='6d',
+                matrix_stability_tol=5e-3,
+                # verbose=True
+                )
+match_ds_6d_sxt.step(20)
+print('RESULTS SXT DS MATCH 6D')
+match_ds_6d_sxt.target_status()
+match_ds_6d_sxt.vary_status()
+line.vars['t_turn_s']=0.
+line.discard_tracker()
 line.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
 print('slicing done')
 tab_sliced=line.get_table()
 
-print('insert monitors')
+# print('insert monitors')
 # mon_sc0_mid=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
 #                         num_particles=n_part)
 # mon_sc0_en=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
@@ -173,10 +200,10 @@ print('insert monitors')
 # mon_sc1_ex=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
 #                         num_particles=n_part)
 
-#FODO cell
-# line.insert_element('m_sc0_en',mon_sc0_en,at_s=tab_sliced['s','en1_8'])
+# # FODO cell
+# line.insert_element('m_sc0_en',mon_sc0_en,at_s=tab_sliced['s','en3_8'])
 # line.insert_element('m_sc0_mid',mon_sc0_mid,at_s=tab_sliced['s','BSC_16..10'])
-# line.insert_element('m_sc0_ex',mon_sc0_ex,at_s=tab_sliced['s','ex1_8'])
+# line.insert_element('m_sc0_ex',mon_sc0_ex,at_s=tab_sliced['s','ex3_8'])
 # line.insert_element('m_nc0_en',mon_nc0_en,at_s=tab_sliced['s','en2_8'])
 # line.insert_element('m_nc0_mid',mon_nc0_mid,at_s=tab_sliced['s','BNC_8..10'])
 # line.insert_element('m_nc0_ex',mon_nc0_ex,at_s=tab_sliced['s','ex2_8'])
@@ -237,15 +264,15 @@ matcher = xp.longitudinal.rfbucket_matching.RFBucketMatcher(rfbucket=rfbucket,
 z_particles, delta_particles, _, _ = matcher.generate(macroparticlenumber=n_part)
 particles.zeta=z_particles
 particles.delta=delta_particles
-tw_loc = twiss_delta(particles.delta)
-Ax = np.sqrt(tw_loc[:, 0]/tw_6d.betx[0])
-Bx = (tw_6d.alfx[0]-tw_loc[:,1])/np.sqrt(tw_6d.betx[0]*tw_loc[:,0])
-Ay = np.sqrt(tw_loc[:, 2]/tw_6d.bety[0])
-By = (tw_6d.alfy[0]-tw_loc[:,3])/np.sqrt(tw_6d.bety[0]*tw_loc[:,2])
-particles.px = -Bx*particles.x + particles.px/Ax + tw_6d.ddpx[0]*particles.delta**2
-particles.x = Ax*particles.x + tw_6d.ddx[0]*particles.delta**2
-particles.py = -By*particles.y + particles.py/Ay + tw_6d.ddpy[0]*particles.delta**2
-particles.y = Ay*particles.y + tw_6d.ddy[0]*particles.delta**2
+# tw_loc = twiss_delta(particles.delta)
+# Ax = np.sqrt(tw_loc[:, 0]/tw_6d.betx[0])
+# Bx = (tw_6d.alfx[0]-tw_loc[:,1])/np.sqrt(tw_6d.betx[0]*tw_loc[:,0])
+# Ay = np.sqrt(tw_loc[:, 2]/tw_6d.bety[0])
+# By = (tw_6d.alfy[0]-tw_loc[:,3])/np.sqrt(tw_6d.bety[0]*tw_loc[:,2])
+# particles.px = -Bx*particles.x + particles.px/Ax + tw_6d.ddpx[0]*particles.delta**2
+# particles.x = Ax*particles.x + tw_6d.ddx[0]*particles.delta**2
+# particles.py = -By*particles.y + particles.py/Ay + tw_6d.ddpy[0]*particles.delta**2
+# particles.y = Ay*particles.y + tw_6d.ddy[0]*particles.delta**2
 particles0=particles.copy()
 print('Particles ok')
 
@@ -263,6 +290,33 @@ eps_x=line.log_last_track['eps_x']
 eps_y=line.log_last_track['eps_y']
 eps_s=line.log_last_track['eps_s']
 sig_z=line.log_last_track['sig_z']
+lost_part = particles.at_turn[particles.state < 0]
+transmission=calculate_transmission(sorted(lost_part), n_part, n_turns)
+
+dico={"b3": b3,
+    "b5":b5,
+    "x_mean":x_mean,
+    "y_mean":y_mean,
+    "eps_x":eps_x,
+    "eps_y":eps_y,
+    "eps_s":eps_s,
+    "sig_z":sig_z,
+    "tr":transmission
+}
+# file_path='/mnt/c/muco/code/tuning_chormacorrect_no_errors.json'
+# try:
+#     with open(file_path, "x") as json_file:
+#         json.dump(dico, json_file)
+#     print("Lists saved to", file_path)
+# except FileExistsError:
+#     print("File", file_path, "already exists. 
+# Cannot overwrite.")
+
+with open('/mnt/c/muco/code/tuning_chormacorrect_no_errors_nocorrectMontag.json', 'r') as file:
+    data = json.load(file)
+ex=np.array(data['eps_x'])
+ey=np.array(data['eps_y'])
+es=np.array(data['eps_s'])
 
 plt.figure()
 ax1 = plt.subplot(2,1,1)
@@ -273,61 +327,117 @@ plt.plot(y_mean)
 plt.ylabel(r'$y_{centroid}$')
 plt.xlabel('Turn')
 plt.show()
+turn=np.linspace(0,N_turn_rcs,n_turns)
 
-plt.figure(figsize=(7, 7))
-ax1 = plt.subplot(4, 1, 1)
+plt.figure(figsize=(7, 5))
+ax1 = plt.subplot(2, 1, 1)
 plt.ylabel(r'$\Delta \epsilon / \epsilon_{x,0}$')
-plt.plot((eps_x - eps_x[0]) / eps_x[0])
-ax2 = plt.subplot(4, 1, 2, sharex=ax1)
+plt.plot(turn, (ex - ex[0]) / ex[0], alpha=0.7, label='no error', color='tab:orange')
+plt.plot(turn, (eps_x - eps_x[0]) / eps_x[0], alpha=0.8, label='with errors', color='tab:blue')
+plt.legend()
+ax2 = plt.subplot(2, 1, 2, sharex=ax1)
 plt.ylabel(r'$\Delta \epsilon /\epsilon_{y,0}$')
-plt.plot((eps_y - eps_y[0]) / eps_y[0])
-ax3 = plt.subplot(4, 1, 3, sharex=ax1)
-color = 'tab:red'
-ax3.set_ylabel('$\sigma_z$ [m]', color=color)
-ax3.plot(sig_z, color=color)
-ax3.tick_params(axis='y', labelcolor=color)
-ax3_2 = ax3.twinx()  
-color = 'tab:blue'
-ax3_2.set_ylabel('$ \Delta \epsilon_s / \epsilon_s$ [eVs]', color=color)
-ax3_2.plot((eps_s-eps_s[0])/eps_s[0], color=color)
-ax3_2.tick_params(axis='y', labelcolor=color)
-lost_part=particles.at_turn[particles.state<0]
-ax4 = plt.subplot(4, 1, 4, sharex=ax1)
-ax4.set_ylabel('tr')
-ax4.plot(calculate_transmission(sorted(lost_part),n_part,n_turns),color=color)
+plt.plot(turn, (ey - ey[0]) / ey[0], alpha=0.7, label='no error', color='tab:orange')
+plt.plot(turn, (eps_y - eps_y[0]) / eps_y[0], alpha=0.8, label='with errors', color='tab:blue')
 plt.xlabel('Turn')
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(7, 5))
+ax1 = plt.subplot(2, 1, 1)
+plt.ylabel('$ \Delta \epsilon_s / \epsilon_s$ ')
+plt.plot(turn, (es - es[0]) / es[0], label='no error', color='tab:orange')
+plt.plot(turn, (eps_s - eps_s[0]) / eps_s[0], label='with errors', color='tab:blue')
+plt.legend() 
+ax2 = plt.subplot(2, 1, 2, sharex=ax1)
+plt.ylabel('tr')
+plt.plot(turn, np.ones(n_turns), label='no error', color='tab:orange')
+plt.plot(turn, calculate_transmission(sorted(lost_part), n_part, n_turns), label='with errors', color='tab:blue')
+plt.xlabel('Turn')
+plt.legend()  
 plt.tight_layout()
 plt.show()
 
+# plt.figure(figsize=(7, 7))
+# ax1 = plt.subplot(4, 1, 1)
+# plt.ylabel(r'$\Delta \epsilon / \epsilon_{x,0}$')
+# plt.plot((eps_x - eps_x[0]) / eps_x[0])
+# ax2 = plt.subplot(4, 1, 2, sharex=ax1)
+# plt.ylabel(r'$\Delta \epsilon /\epsilon_{y,0}$')
+# plt.plot((eps_y - eps_y[0]) / eps_y[0])
+# ax3 = plt.subplot(4, 1, 3, sharex=ax1)
+# color = 'tab:red'
+# ax3.set_ylabel('$\sigma_z$ [m]', color=color)
+# ax3.plot(sig_z, color=color)
+# ax3.tick_params(axis='y', labelcolor=color)
+# ax3_2 = ax3.twinx()  
+# color = 'tab:blue'
+# ax3_2.set_ylabel('$ \Delta \epsilon_s / \epsilon_s$ [eVs]', color=color)
+# ax3_2.plot((eps_s-eps_s[0])/eps_s[0], color=color)
+# ax3_2.tick_params(axis='y', labelcolor=color)
+# lost_part=particles.at_turn[particles.state<0]
+# ax4 = plt.subplot(4, 1, 4, sharex=ax1)
+# ax4.set_ylabel('tr')
+# ax4.plot(calculate_transmission(sorted(lost_part),n_part,n_turns),color=color)
+# plt.xlabel('Turn')
+# plt.tight_layout()
+# plt.show()
 distribution_lost_turn(particles0,particles)
 distribution_lost_turn_long(particles0,particles)
 
 mask= particles.state > 0
 fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))  
-axes[0, 0].scatter(rec.x[mask], rec.px[mask],s=2)
+axes[0, 0].scatter(particles.x[mask], particles.px[mask],s=2)
 axes[0, 0].set_xlabel('x [m]')
 axes[0, 0].set_ylabel("x'")
 # axes[0, 0].set_ylim(-1e-4, 1e-4)
 # axes[0, 0].set_xlim(-1e-4, 1e-4)
 #axes[0, 0].axis('equal')
-axes[0, 1].scatter(rec.y[mask], rec.py[mask],s=2)
+axes[0, 1].scatter(particles.y[mask], particles.py[mask],s=2)
 axes[0, 1].set_xlabel('y [m]')
 axes[0, 1].set_ylabel("y'")
 # axes[0, 1].set_ylim(-1e-4, 1e-4)
 # axes[0, 1].set_xlim(-1e-4, 1e-4)
 #axes[0, 1].axis('equal')
-axes[1, 0].scatter(rec.x[mask], rec.y[mask],s=2)
+axes[1, 0].scatter(particles.x[mask], particles.y[mask],s=2)
 axes[1, 0].set_xlabel('x [m]')
 axes[1, 0].set_ylabel('y [m]')
 # axes[1, 0].set_ylim(-1e-4, 1e-4)
 # axes[1, 0].set_xlim(-1e-4, 1e-4)
-axes[1, 1].scatter(rec.zeta[mask], rec.delta[mask], s=2)
+axes[1, 1].scatter(particles.zeta[mask], particles.delta[mask], s=2)
 axes[1, 1].set_xlabel('z [m]')
 axes[1, 1].set_ylabel(r'$\delta$')
 for ax in axes.flat:
     ax.ticklabel_format(style='sci', scilimits=(-3, 3), axis='both')
 plt.tight_layout()
 plt.show()
+
+# mask= particles.state > 0
+# fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(10, 8))  
+# axes[0, 0].scatter(rec.x[mask], rec.px[mask],s=2)
+# axes[0, 0].set_xlabel('x [m]')
+# axes[0, 0].set_ylabel("x'")
+# # axes[0, 0].set_ylim(-1e-4, 1e-4)
+# # axes[0, 0].set_xlim(-1e-4, 1e-4)
+# #axes[0, 0].axis('equal')
+# axes[0, 1].scatter(rec.y[mask], rec.py[mask],s=2)
+# axes[0, 1].set_xlabel('y [m]')
+# axes[0, 1].set_ylabel("y'")
+# # axes[0, 1].set_ylim(-1e-4, 1e-4)
+# # axes[0, 1].set_xlim(-1e-4, 1e-4)
+# #axes[0, 1].axis('equal')
+# axes[1, 0].scatter(rec.x[mask], rec.y[mask],s=2)
+# axes[1, 0].set_xlabel('x [m]')
+# axes[1, 0].set_ylabel('y [m]')
+# # axes[1, 0].set_ylim(-1e-4, 1e-4)
+# # axes[1, 0].set_xlim(-1e-4, 1e-4)
+# axes[1, 1].scatter(rec.zeta[mask], rec.delta[mask], s=2)
+# axes[1, 1].set_xlabel('z [m]')
+# axes[1, 1].set_ylabel(r'$\delta$')
+# for ax in axes.flat:
+#     ax.ticklabel_format(style='sci', scilimits=(-3, 3), axis='both')
+# plt.tight_layout()
+# plt.show()
 
 # #Check traj in cells for diff t_turn_s
 # plt.figure()
@@ -423,4 +533,113 @@ plt.show()
 # plt.xlabel('n_turns in arc')
 # plt.ylabel('x [mm]')
 # plt.legend()
+# plt.show()
+
+# std_x_1=[]
+# std_y_1=[]
+# x_1=[]
+# y_1=[]
+# std_x_2=[]
+# std_y_2=[]
+# x_2=[]
+# y_2=[]
+# line_cell,line_useless= make_optics(file_input,0.5,21,method) 
+# diff=sv['X','ex1']-sv['X','en1']
+# for i in range (0,n_turns):
+#     x_1.append(np.mean(mon_sc0_en.x[:,i]))
+#     y_1.append(np.mean(mon_sc0_en.y[:,i]))
+#     std_x_1.append(np.std(mon_sc0_en.x[:,i]))
+#     std_y_1.append(np.std(mon_sc0_en.y[:,i]))
+
+#     x_2.append(np.mean(mon_sc0_ex.x[:,i]))
+#     y_2.append(np.mean(mon_sc0_ex.y[:,i]))
+#     std_x_2.append(np.std(mon_sc0_ex.x[:,i]))
+#     std_y_2.append(np.std(mon_sc0_ex.y[:,i]))
+
+# x_1 = np.array(x_1)*1e3
+# x_2 = np.array(x_2)*1e3+diff*1e3
+# std_x_1 = np.array(std_x_1)*1e3
+# std_x_2 = np.array(std_x_2)*1e3
+# y_1 = np.array(y_1)*1e3
+# y_2 = np.array(y_2)*1e3
+# std_y_1 = np.array(std_y_1)*1e3
+# std_y_2 = np.array(std_y_2)*1e3
+
+# max_3x=np.max([np.max(x_1 + 3 * std_x_1), np.max(x_2 + 3 * std_x_2)])
+# min_3x=np.min([np.min(x_1 - 3 * std_x_1),np.min(x_2 - 3* std_x_2)])
+# max_6x=np.max([np.max(x_1 + 6 * std_x_1), np.max(x_2 + 6 * std_x_2)])
+# min_6x=np.min([np.min(x_1 - 6 * std_x_1),np.min(x_2 - 6 * std_x_2)])
+# max_3y = np.max([np.max(y_1 + 3 * std_y_1), np.max(y_2 + 3 * std_y_2)])
+# min_3y = np.min([np.min(y_1 - 3 * std_y_1), np.min(y_2 - 3 * std_y_2)])
+# max_6y = np.max([np.max(y_1 + 6 * std_y_1), np.max(y_2 + 6 * std_y_2)])
+# min_6y = np.min([np.min(y_1 - 6 * std_y_1), np.min(y_2 - 6 * std_y_2)])
+
+# plt.figure()
+# plt.plot(turn,x_1, label='x_entry')
+# plt.plot(turn,x_2, label='x_exit')
+# plt.fill_between(turn, x_1 - 3*std_x_1, x_1 + 3*std_x_1, alpha=0.2, color='blue')
+# plt.fill_between(turn, x_2 - 3 * std_x_2, x_2 + 3 * std_x_2, alpha=0.2, color='orange')
+# plt.axhline(max_3x, color='k', linestyle='--')
+# plt.axhline(min_3x, color='k', linestyle='--')
+# plt.text(15, max_3x, f'$3\sigma$: {max_3x:.2f} mm', va='bottom', ha='right', color='k')
+# plt.text(15, min_3x, f'$3\sigma$: {min_3x:.2f} mm', va='bottom', ha='right', color='k')
+# plt.fill_between(turn, x_1 - 6*std_x_1, x_1 + 6*std_x_1, alpha=0.2, color='blue')
+# plt.fill_between(turn, x_2 - 6 * std_x_2, x_2 + 6 * std_x_2, alpha=0.2, color='orange')
+# plt.axhline(max_6x, color='dimgray', linestyle='--')
+# plt.axhline(min_6x, color='dimgray', linestyle='--')
+# plt.text(15, max_6x, f'$6\sigma$: {max_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
+# plt.text(15, min_6x, f'$6\sigma$: {min_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
+# plt.xlabel('Turn')
+# plt.ylabel('x [mm]')
+# plt.legend(loc='lower right')
+# plt.show()
+
+# plt.figure()
+# plt.title('3$\sigma_x$')
+# plt.plot(turn,x_1, label='x_entry')
+# plt.plot(turn,x_2, label='x_exit')
+# plt.fill_between(turn, x_1 - 3*std_x_1, x_1 + 3*std_x_1, alpha=0.2, color='blue')
+# plt.fill_between(turn, x_2 - 3 * std_x_2, x_2 + 3 * std_x_2, alpha=0.2, color='orange')
+# plt.axhline(max_3x, color='k', linestyle='--')
+# plt.axhline(min_3x, color='k', linestyle='--')
+# plt.text(15, max_3x, f'$3\sigma$: {max_3x:.2f} mm', va='bottom', ha='right', color='k')
+# plt.text(15, min_3x, f'$3\sigma$: {min_3x:.2f} mm', va='bottom', ha='right', color='k')
+# plt.xlabel('Turn')
+# plt.ylabel('x [mm]')
+# plt.legend(loc='lower right')
+# plt.show()
+
+# plt.figure()
+# plt.title('6$\sigma_x$')
+# plt.plot(turn,x_1, label='x_entry')
+# plt.plot(turn,x_2, label='x_exit')
+# plt.fill_between(turn, x_1 - 6*std_x_1, x_1 + 6*std_x_1, alpha=0.2, color='blue')
+# plt.fill_between(turn, x_2 - 6 * std_x_2, x_2 + 6 * std_x_2, alpha=0.2, color='orange')
+# plt.axhline(max_6x, color='dimgray', linestyle='--')
+# plt.axhline(min_6x, color='dimgray', linestyle='--')
+# plt.text(15, max_6x, f'$6\sigma$: {max_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
+# plt.text(15, min_6x, f'$6\sigma$: {min_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
+# plt.xlabel('Turn')
+# plt.ylabel('x [mm]')
+# plt.legend(loc='lower right')
+# plt.show()
+
+# plt.figure()
+# plt.plot(turn,y_1, label='y_entry')
+# plt.plot(turn,y_2, label='y_exit')
+# plt.fill_between(turn, y_1 - 3*std_y_1, y_1 + 3*std_y_1, alpha=0.2, color='blue')
+# plt.fill_between(turn, y_2 - 3 * std_y_2, y_2 + 3 * std_y_2, alpha=0.2, color='orange')
+# plt.axhline(max_3y, color='k', linestyle='--')
+# plt.axhline(min_3y, color='k', linestyle='--')
+# plt.axhline(max_6y, color='dimgray', linestyle='--')
+# plt.axhline(min_6y, color='dimgray', linestyle='--')
+# plt.fill_between(turn, y_1 - 6*std_y_1, y_1 + 6*std_y_1, alpha=0.1, color='blue')
+# plt.fill_between(turn, y_2 - 6 * std_y_2, y_2 + 6 * std_y_2, alpha=0.1, color='orange')
+# plt.text(15, max_3y, f'$3\sigma$: {max_3y:.2f} mm', va='bottom', ha='right', color='k')
+# plt.text(15, min_3y, f'$3\sigma$: {min_3y:.2f} mm', va='bottom', ha='right', color='k')
+# plt.text(15, max_6y, f'$6\sigma$: {max_6y:.2f} mm', va='bottom', ha='right', color='dimgray')
+# plt.text(15, min_6y, f'$6\sigma$: {min_6y:.2f} mm', va='bottom', ha='right', color='dimgray')
+# plt.xlabel('Turn')
+# plt.ylabel('y [mm]')
+# plt.legend(loc='lower right')
 # plt.show()
