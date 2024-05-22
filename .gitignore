@@ -5,5 +5,5 @@
 *.png
 *.pptx
 build/
-*.json
 .vs/
+*.json

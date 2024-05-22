@@ -51,51 +51,52 @@ def track(line, num_turns=1):
 n_k=21
 option='var_k'
 # option='var_ref'
-line_cell_inj, line_ds_inj = make_optics(file_input, 0, n_k, option)
-line_cell_ext, line_ds_ext = make_optics(file_input, 1, n_k, option)
-line_cell_mid, line_ds_mid=make_optics(file_input, 0.5, n_k, option)
-line_cell_mid0, line_ds_mid0=make_optics(file_input, 0.1, n_k,option)
-line_cell_mid1, line_ds_mid1=make_optics(file_input, 0.25, n_k,option)
-line_cell_mid2, line_ds_mid2=make_optics(file_input, 0.75, n_k,option)
-rec_cell_inj=track(line_cell_inj)
-rec_cell_ext=track(line_cell_ext)
-rec_cell_mid=track(line_cell_mid)
-rec_cell_mid0=track(line_cell_mid0)
-rec_cell_mid1=track(line_cell_mid1)
-rec_cell_mid2=track(line_cell_mid2)
 
-# # rec_ds_inj_1turn=track(line_ds_inj)
-# # rec_ds_inj=track(line_ds_inj, num_turns=N_turn*nb_arc)
+# line_cell_inj, line_ds_inj = make_optics(file_input, 0, n_k, option)
+# line_cell_ext, line_ds_ext = make_optics(file_input, 1, n_k, option)
+# line_cell_mid, line_ds_mid=make_optics(file_input, 0.5, n_k, option)
+# line_cell_mid0, line_ds_mid0=make_optics(file_input, 0.1, n_k,option)
+# line_cell_mid1, line_ds_mid1=make_optics(file_input, 0.25, n_k,option)
+# line_cell_mid2, line_ds_mid2=make_optics(file_input, 0.75, n_k,option)
+# rec_cell_inj=track(line_cell_inj)
+# rec_cell_ext=track(line_cell_ext)
+# rec_cell_mid=track(line_cell_mid)
+# rec_cell_mid0=track(line_cell_mid0)
+# rec_cell_mid1=track(line_cell_mid1)
+# rec_cell_mid2=track(line_cell_mid2)
 
-line_cell_inj_ref, line_ds_inj_ref = make_optics(file_input, 0, n_k,'var_ref')
-line_cell_ext_ref, line_ds_ext_ref = make_optics(file_input, 1, n_k,'var_ref')
-line_cell_mid_ref, line_ds_mid_ref = make_optics(file_input, 0.5, n_k,'var_ref')
+# # # rec_ds_inj_1turn=track(line_ds_inj)
+# # # rec_ds_inj=track(line_ds_inj, num_turns=N_turn*nb_arc)
+
+# line_cell_inj_ref, line_ds_inj_ref = make_optics(file_input, 0, n_k,'var_ref')
+# line_cell_ext_ref, line_ds_ext_ref = make_optics(file_input, 1, n_k,'var_ref')
+# line_cell_mid_ref, line_ds_mid_ref = make_optics(file_input, 0.5, n_k,'var_ref')
 
 
 
-# #Survey cell
-survey_cell_inj=line_cell_inj.survey(theta0=angle_cell/4)
-survey_cell_ext=line_cell_ext.survey(theta0=angle_cell/4) 
-survey_cell_mid=line_cell_mid.survey(theta0=angle_cell/4)
-survey_cell_mid1=line_cell_mid1.survey(theta0=angle_cell/4)
-survey_cell_mid2=line_cell_mid2.survey(theta0=angle_cell/4)
+# # #Survey cell
+# survey_cell_inj=line_cell_inj.survey(theta0=angle_cell/4)
+# survey_cell_ext=line_cell_ext.survey(theta0=angle_cell/4) 
+# survey_cell_mid=line_cell_mid.survey(theta0=angle_cell/4)
+# survey_cell_mid1=line_cell_mid1.survey(theta0=angle_cell/4)
+# survey_cell_mid2=line_cell_mid2.survey(theta0=angle_cell/4)
 
-survey_cell_inj_ref=line_cell_inj_ref.survey(theta0=angle_cell/4)
-survey_cell_ext_ref=line_cell_ext_ref.survey(theta0=angle_cell/4) 
-survey_cell_mid_ref=line_cell_mid_ref.survey(theta0=angle_cell/4) 
+# survey_cell_inj_ref=line_cell_inj_ref.survey(theta0=angle_cell/4)
+# survey_cell_ext_ref=line_cell_ext_ref.survey(theta0=angle_cell/4) 
+# survey_cell_mid_ref=line_cell_mid_ref.survey(theta0=angle_cell/4) 
 
 
 def path_length_plot(time_l):
     path_length_ref=[]
     path_length_k=[]
-    line_inj=make_optics(file_input, 0, n_k,'var_k')[0]
+    line_inj=make_optics(file_input, 0, n_k,'var_k',return_cell='line_cell')
     survey_inj=line_inj.survey(theta0=angle_cell/4)
     for time in time_l:
         # line=make_optics(file_input, time, n_k,'var_ref')[0]
         # survey=line.survey(theta0=angle_cell/4)
         # path=survey['s','_end_point']-survey_cell_inj['s','_end_point']
         # path_length_ref.append(path)
-        line=make_optics(file_input, time, n_k,'var_k')[0]
+        line=make_optics(file_input, time, n_k,'var_k',return_cell='line_cell')
         survey=line.survey(theta0=angle_cell/4)
         path=survey['s','_end_point']-survey_inj['s','_end_point']
         path_length_k.append(path)
@@ -141,19 +142,19 @@ def z_final(nk_list):
 #     return(zl_ref,zl_k)
 
 #Routine to plot path length variation 
-# t_path=np.linspace(0,1,15)
-# t_geo_path=RCS.phi_inj+(RCS.phi_ext-RCS.phi_inj)*t_path
-# path_length_geo=[]
-# for t in t_geo_path:
-#     path_length_geo.append(RCS.path_length(t)-RCS.path_length(RCS.phi_inj))
-# path_length_ref,path_length_k=path_length_plot(t_path)
-# plt.figure()
+t_path=np.linspace(0,1,15)
+t_geo_path=np.linspace(0,RCS.t_ext,15)
+path_length_geo=[]
+for t in t_geo_path:
+    path_length_geo.append(RCS.path_length(t)-RCS.path_length(RCS.t_inj))
+path_length_ref,path_length_k=path_length_plot(t_path)
+plt.figure()
 # plt.plot(t_path,np.array(path_length_k)*nb_cell_tot*2*1e3-np.array(path_length_geo)*nb_cell_tot*2*1e3,label='Tracking')
-# # plt.scatter(t_path,np.array(path_length_geo)*nb_cell_tot*2*1e3,label='Geometry',color='red')
-# plt.xlabel('Time (normalised)')
-# plt.ylabel('Path length variation [mm]')
-# plt.legend()
-# plt.show()
+plt.scatter(t_path,np.array(path_length_geo)*nb_cell_tot*2*1e3,label='Geometry',color='red')
+plt.xlabel('Time (normalised)')
+plt.ylabel('Path length variation [mm]')
+plt.legend()
+plt.show()
 
 #Routine to plot ending point variation 
 # nk_list=[1,11,21,41,51,71,81,101]
@@ -212,35 +213,35 @@ t_traj=[0,0.1,0.25,0.5,0.75,1]
 # # plt.legend()
 # plt.show()
 
-tab=line_cell_ext.get_table()
-plt.figure()
-# plt.title('Reconstructed traj: var_ref, var_k')
-plt.plot(survey_cell_inj['s'], np.array(survey_cell_inj['X']+rec_cell_inj.x[0])*1e3)
-plt.plot(survey_cell_ext['s'], np.array(survey_cell_ext['X']+rec_cell_ext.x[0])*1e3)
-plt.plot(survey_cell_mid['s'], np.array(survey_cell_mid['X']+rec_cell_mid.x[0])*1e3)
-plt.plot(survey_cell_inj['s'], np.array(survey_cell_inj['X']+rec_cell_mid0.x[0])*1e3)
-plt.plot(survey_cell_inj['s'], np.array(survey_cell_inj['X']+rec_cell_mid1.x[0])*1e3)
-plt.plot(survey_cell_inj['s'], np.array(survey_cell_inj['X']+rec_cell_mid2.x[0])*1e3)
-# plt.plot([],[],label='Xsuite', color='black')
-plt.plot(survey_cell_inj_ref['s'], survey_cell_inj_ref['X'])
-plt.plot(survey_cell_ext_ref['s'], survey_cell_ext_ref['X'])
-plt.plot(survey_cell_mid_ref['s'], survey_cell_mid_ref['X'])
-plt.axvline(x=tab['s','en1'], color='grey', linestyle='--')
-plt.axvline(x=tab['s','ex1'], color='grey', linestyle='--')
-plt.axvline(x=tab['s','en2'], color='grey', linestyle='--')
-plt.axvline(x=tab['s','ex2'], color='grey', linestyle='--')
-plt.axvline(x=tab['s','en3'], color='grey', linestyle='--')
-plt.axvline(x=tab['s','ex3'], color='grey', linestyle='--')
-plt.text(tab['s','BSC..10'], 0.1, 'SC', horizontalalignment='center')
-plt.text(tab['s','BNC..10'], 0.1, 'NC', horizontalalignment='center')
-plt.text(tab['s','BSC_1..10'], 0.1, 'SC', horizontalalignment='center')
-# for i in t_traj:
-#         plt.scatter(np.real(RCS.zn(i)), np.imag(RCS.zn(i))*1e3,color='black',s=5)
-# plt.scatter([],[],label='Geometry',color='black',s=5)
-plt.xlabel('s [m]')
-plt.ylabel('x [mm]')
-plt.legend()
-plt.show()
+# tab=line_cell_ext.get_table()
+# plt.figure()
+# # plt.title('Reconstructed traj: var_ref, var_k')
+# plt.plot(survey_cell_inj['s'], np.array(survey_cell_inj['X']+rec_cell_inj.x[0])*1e3)
+# plt.plot(survey_cell_ext['s'], np.array(survey_cell_ext['X']+rec_cell_ext.x[0])*1e3)
+# plt.plot(survey_cell_mid['s'], np.array(survey_cell_mid['X']+rec_cell_mid.x[0])*1e3)
+# plt.plot(survey_cell_inj['s'], np.array(survey_cell_inj['X']+rec_cell_mid0.x[0])*1e3)
+# plt.plot(survey_cell_inj['s'], np.array(survey_cell_inj['X']+rec_cell_mid1.x[0])*1e3)
+# plt.plot(survey_cell_inj['s'], np.array(survey_cell_inj['X']+rec_cell_mid2.x[0])*1e3)
+# # plt.plot([],[],label='Xsuite', color='black')
+# plt.plot(survey_cell_inj_ref['s'], survey_cell_inj_ref['X'])
+# plt.plot(survey_cell_ext_ref['s'], survey_cell_ext_ref['X'])
+# plt.plot(survey_cell_mid_ref['s'], survey_cell_mid_ref['X'])
+# plt.axvline(x=tab['s','en1'], color='grey', linestyle='--')
+# plt.axvline(x=tab['s','ex1'], color='grey', linestyle='--')
+# plt.axvline(x=tab['s','en2'], color='grey', linestyle='--')
+# plt.axvline(x=tab['s','ex2'], color='grey', linestyle='--')
+# plt.axvline(x=tab['s','en3'], color='grey', linestyle='--')
+# plt.axvline(x=tab['s','ex3'], color='grey', linestyle='--')
+# plt.text(tab['s','BSC..10'], 0.1, 'SC', horizontalalignment='center')
+# plt.text(tab['s','BNC..10'], 0.1, 'NC', horizontalalignment='center')
+# plt.text(tab['s','BSC_1..10'], 0.1, 'SC', horizontalalignment='center')
+# # for i in t_traj:
+# #         plt.scatter(np.real(RCS.zn(i)), np.imag(RCS.zn(i))*1e3,color='black',s=5)
+# # plt.scatter([],[],label='Geometry',color='black',s=5)
+# plt.xlabel('s [m]')
+# plt.ylabel('x [mm]')
+# plt.legend()
+# plt.show()
 
 # plt.figure()
 # # plt.title('Difference of trajectory')

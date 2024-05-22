@@ -105,8 +105,8 @@ line.vars['l_dip_NC']=line.functions.l_nc_pol(line.vars['t_turn_s']/t_acc)
 line.vars['l_dip_SC']=line.functions.l_sc_pol(line.vars['t_turn_s']/t_acc)
 line.vars['dz_rf']=line.functions.path_diff_1cav(line.vars['t_turn_s']/t_acc)
 
-# line.element_refs['dz_acc'].dzeta=line.vars['dz_rf']
-# line.element_refs['dz_acc_1'].dzeta=line.vars['dz_rf']
+line.element_refs['dz_acc'].dzeta=line.vars['dz_rf']
+line.element_refs['dz_acc_1'].dzeta=line.vars['dz_rf']
 
 h_ref_NC=RCS.hn(t_ref)[i_BNC]
 h_ref_SC=RCS.hn(t_ref)[i_BSC]
@@ -183,16 +183,16 @@ tab_sliced=line.get_table()
 # print('insert monitors')
 # mon_sc0_mid=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
 #                         num_particles=n_part)
-# mon_sc0_en=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
-#                         num_particles=n_part)
-# mon_sc0_ex=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
-#                         num_particles=n_part)
-# mon_nc0_en=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
-#                         num_particles=n_part)
-# mon_nc0_mid=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
-#                         num_particles=n_part)
-# mon_nc0_ex=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
-#                         num_particles=n_part)
+mon_sc0_en=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
+                        num_particles=n_part)
+mon_sc0_ex=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
+                        num_particles=n_part)
+mon_nc0_en=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
+                        num_particles=n_part)
+mon_nc0_mid=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
+                        num_particles=n_part)
+mon_nc0_ex=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
+                        num_particles=n_part)
 # mon_sc1_mid=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
 #                         num_particles=n_part)
 # mon_sc1_en=xt.ParticlesMonitor(start_at_turn=0, stop_at_turn=n_turns,
@@ -201,12 +201,12 @@ tab_sliced=line.get_table()
 #                         num_particles=n_part)
 
 # # FODO cell
-# line.insert_element('m_sc0_en',mon_sc0_en,at_s=tab_sliced['s','en3_8'])
+line.insert_element('m_sc0_en',mon_sc0_en,at_s=tab_sliced['s','en3_8'])
 # line.insert_element('m_sc0_mid',mon_sc0_mid,at_s=tab_sliced['s','BSC_16..10'])
-# line.insert_element('m_sc0_ex',mon_sc0_ex,at_s=tab_sliced['s','ex3_8'])
-# line.insert_element('m_nc0_en',mon_nc0_en,at_s=tab_sliced['s','en2_8'])
-# line.insert_element('m_nc0_mid',mon_nc0_mid,at_s=tab_sliced['s','BNC_8..10'])
-# line.insert_element('m_nc0_ex',mon_nc0_ex,at_s=tab_sliced['s','ex2_8'])
+line.insert_element('m_sc0_ex',mon_sc0_ex,at_s=tab_sliced['s','ex3_8'])
+line.insert_element('m_nc0_en',mon_nc0_en,at_s=tab_sliced['s','en2_8'])
+line.insert_element('m_nc0_mid',mon_nc0_mid,at_s=tab_sliced['s','BNC_8..10'])
+line.insert_element('m_nc0_ex',mon_nc0_ex,at_s=tab_sliced['s','ex2_8'])
 # line.insert_element('m_sc1_en',mon_sc1_en,at_s=tab_sliced['s','en3_8'])
 # line.insert_element('m_sc1_mid',mon_sc1_mid,at_s=tab_sliced['s','BSC_17..10'])
 # line.insert_element('m_sc1_ex',mon_sc1_ex,at_s=tab_sliced['s','ex3_8'])
@@ -312,7 +312,7 @@ dico={"b3": b3,
 #     print("File", file_path, "already exists. 
 # Cannot overwrite.")
 
-with open('/mnt/c/muco/code/tuning_chormacorrect_no_errors_nocorrectMontag.json', 'r') as file:
+with open('/mnt/c/muco/code/data_saved/tuning_chormacorrect_no_errors.json', 'r') as file:
     data = json.load(file)
 ex=np.array(data['eps_x'])
 ey=np.array(data['eps_y'])
@@ -535,111 +535,141 @@ plt.show()
 # plt.legend()
 # plt.show()
 
-# std_x_1=[]
-# std_y_1=[]
-# x_1=[]
-# y_1=[]
-# std_x_2=[]
-# std_y_2=[]
-# x_2=[]
-# y_2=[]
-# line_cell,line_useless= make_optics(file_input,0.5,21,method) 
+std_x_1=[]
+std_y_1=[]
+x_1=[]
+y_1=[]
+std_x_2=[]
+std_y_2=[]
+x_2=[]
+y_2=[]
+std_x_3=[]
+std_y_3=[]
+x_3=[]
+y_3=[]
+turn=np.linspace(0,N_turn_rcs,n_turns)
+line_cell= make_optics(file_input,0.5,21,method,return_cell='line_cell')
+line_cell.build_tracker()
+# sv=line_cell.survey(theta0=RCS.cell_angle/4) 
 # diff=sv['X','ex1']-sv['X','en1']
-# for i in range (0,n_turns):
-#     x_1.append(np.mean(mon_sc0_en.x[:,i]))
-#     y_1.append(np.mean(mon_sc0_en.y[:,i]))
-#     std_x_1.append(np.std(mon_sc0_en.x[:,i]))
-#     std_y_1.append(np.std(mon_sc0_en.y[:,i]))
+diff=0
+dip_en=mon_nc0_en
+dip_ex=mon_nc0_ex
+dip_mid=mon_nc0_mid
+for i in range (0,n_turns):
+    x_1.append(np.mean(dip_en.x[:,i]))
+    y_1.append(np.mean(dip_en.y[:,i]))
+    std_x_1.append(np.std(dip_en.x[:,i]))
+    std_y_1.append(np.std(dip_en.y[:,i]))
 
-#     x_2.append(np.mean(mon_sc0_ex.x[:,i]))
-#     y_2.append(np.mean(mon_sc0_ex.y[:,i]))
-#     std_x_2.append(np.std(mon_sc0_ex.x[:,i]))
-#     std_y_2.append(np.std(mon_sc0_ex.y[:,i]))
+    x_2.append(np.mean(dip_ex.x[:,i]))
+    y_2.append(np.mean(dip_ex.y[:,i]))
+    std_x_2.append(np.std(dip_ex.x[:,i]))
+    std_y_2.append(np.std(dip_ex.y[:,i]))
 
-# x_1 = np.array(x_1)*1e3
-# x_2 = np.array(x_2)*1e3+diff*1e3
-# std_x_1 = np.array(std_x_1)*1e3
-# std_x_2 = np.array(std_x_2)*1e3
-# y_1 = np.array(y_1)*1e3
-# y_2 = np.array(y_2)*1e3
-# std_y_1 = np.array(std_y_1)*1e3
-# std_y_2 = np.array(std_y_2)*1e3
+    x_3.append(np.mean(dip_mid.x[:,i]))
+    y_3.append(np.mean(dip_mid.y[:,i]))
+    std_x_3.append(np.std(dip_mid.x[:,i]))
+    std_y_3.append(np.std(dip_mid.y[:,i]))
 
-# max_3x=np.max([np.max(x_1 + 3 * std_x_1), np.max(x_2 + 3 * std_x_2)])
-# min_3x=np.min([np.min(x_1 - 3 * std_x_1),np.min(x_2 - 3* std_x_2)])
-# max_6x=np.max([np.max(x_1 + 6 * std_x_1), np.max(x_2 + 6 * std_x_2)])
-# min_6x=np.min([np.min(x_1 - 6 * std_x_1),np.min(x_2 - 6 * std_x_2)])
-# max_3y = np.max([np.max(y_1 + 3 * std_y_1), np.max(y_2 + 3 * std_y_2)])
-# min_3y = np.min([np.min(y_1 - 3 * std_y_1), np.min(y_2 - 3 * std_y_2)])
-# max_6y = np.max([np.max(y_1 + 6 * std_y_1), np.max(y_2 + 6 * std_y_2)])
-# min_6y = np.min([np.min(y_1 - 6 * std_y_1), np.min(y_2 - 6 * std_y_2)])
+x_1 = np.array(x_1)*1e3
+x_2 = np.array(x_2)*1e3+diff*1e3
+x_3=np.array(x_3)*1e3
+std_x_1 = np.array(std_x_1)*1e3
+std_x_2 = np.array(std_x_2)*1e3
+std_x_3 = np.array(std_x_3)*1e3
+y_1 = np.array(y_1)*1e3
+y_2 = np.array(y_2)*1e3
+y_3 = np.array(y_3)*1e3
+std_y_1 = np.array(std_y_1)*1e3
+std_y_2 = np.array(std_y_2)*1e3
+std_y_3 = np.array(std_y_3)*1e3
 
-# plt.figure()
-# plt.plot(turn,x_1, label='x_entry')
-# plt.plot(turn,x_2, label='x_exit')
-# plt.fill_between(turn, x_1 - 3*std_x_1, x_1 + 3*std_x_1, alpha=0.2, color='blue')
-# plt.fill_between(turn, x_2 - 3 * std_x_2, x_2 + 3 * std_x_2, alpha=0.2, color='orange')
-# plt.axhline(max_3x, color='k', linestyle='--')
-# plt.axhline(min_3x, color='k', linestyle='--')
-# plt.text(15, max_3x, f'$3\sigma$: {max_3x:.2f} mm', va='bottom', ha='right', color='k')
-# plt.text(15, min_3x, f'$3\sigma$: {min_3x:.2f} mm', va='bottom', ha='right', color='k')
-# plt.fill_between(turn, x_1 - 6*std_x_1, x_1 + 6*std_x_1, alpha=0.2, color='blue')
-# plt.fill_between(turn, x_2 - 6 * std_x_2, x_2 + 6 * std_x_2, alpha=0.2, color='orange')
-# plt.axhline(max_6x, color='dimgray', linestyle='--')
-# plt.axhline(min_6x, color='dimgray', linestyle='--')
-# plt.text(15, max_6x, f'$6\sigma$: {max_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
-# plt.text(15, min_6x, f'$6\sigma$: {min_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
-# plt.xlabel('Turn')
-# plt.ylabel('x [mm]')
-# plt.legend(loc='lower right')
-# plt.show()
+max_3x=np.max([np.max(x_1 + 3 * std_x_1), np.max(x_2 + 3 * std_x_2),np.max(x_3 + 3 * std_x_3)])
+min_3x=np.min([np.min(x_1 - 3 * std_x_1),np.min(x_2 - 3* std_x_2),np.min(x_3 - 3* std_x_3)])
+max_6x=np.max([np.max(x_1 + 6 * std_x_1), np.max(x_2 + 6 * std_x_2),np.max(x_3 + 6 * std_x_3)])
+min_6x=np.min([np.min(x_1 - 6 * std_x_1),np.min(x_2 - 6 * std_x_2),np.min(x_3 - 6 * std_x_3)])
+max_3y = np.max([np.max(y_1 + 3 * std_y_1), np.max(y_2 + 3 * std_y_2),np.max(y_3 + 3 * std_y_3)])
+min_3y = np.min([np.min(y_1 - 3 * std_y_1), np.min(y_2 - 3 * std_y_2),np.min(y_3 - 3 * std_y_3)])
+max_6y = np.max([np.max(y_1 + 6 * std_y_1), np.max(y_2 + 6 * std_y_2),np.max(y_3 + 6 * std_y_3)])
+min_6y = np.min([np.min(y_1 - 6 * std_y_1), np.min(y_2 - 6 * std_y_2),np.min(y_3 - 6 * std_y_3)])
 
-# plt.figure()
-# plt.title('3$\sigma_x$')
-# plt.plot(turn,x_1, label='x_entry')
-# plt.plot(turn,x_2, label='x_exit')
-# plt.fill_between(turn, x_1 - 3*std_x_1, x_1 + 3*std_x_1, alpha=0.2, color='blue')
-# plt.fill_between(turn, x_2 - 3 * std_x_2, x_2 + 3 * std_x_2, alpha=0.2, color='orange')
-# plt.axhline(max_3x, color='k', linestyle='--')
-# plt.axhline(min_3x, color='k', linestyle='--')
-# plt.text(15, max_3x, f'$3\sigma$: {max_3x:.2f} mm', va='bottom', ha='right', color='k')
-# plt.text(15, min_3x, f'$3\sigma$: {min_3x:.2f} mm', va='bottom', ha='right', color='k')
-# plt.xlabel('Turn')
-# plt.ylabel('x [mm]')
-# plt.legend(loc='lower right')
-# plt.show()
+plt.figure()
+plt.plot(turn,x_1, label='x_entry')
+plt.plot(turn,x_2, label='x_exit')
+plt.plot(turn,x_3, label='x_mid')
+plt.fill_between(turn, x_1 - 3*std_x_1, x_1 + 3*std_x_1, alpha=0.2, color='blue')
+plt.fill_between(turn, x_2 - 3 * std_x_2, x_2 + 3 * std_x_2, alpha=0.2, color='orange')
+plt.fill_between(turn, x_3 - 3 * std_x_3, x_3 + 3 * std_x_3, alpha=0.2,color='green')
+plt.axhline(max_3x, color='k', linestyle='--')
+plt.axhline(min_3x, color='k', linestyle='--')
+plt.text(15, max_3x, f'$3\sigma$: {max_3x:.2f} mm', va='bottom', ha='right', color='k')
+plt.text(15, min_3x, f'$3\sigma$: {min_3x:.2f} mm', va='bottom', ha='right', color='k')
+plt.fill_between(turn, x_1 - 6*std_x_1, x_1 + 6*std_x_1, alpha=0.2, color='blue')
+plt.fill_between(turn, x_2 - 6 * std_x_2, x_2 + 6 * std_x_2, alpha=0.2, color='orange')
+plt.fill_between(turn, x_3 - 6 * std_x_3, x_3 + 6 * std_x_3, alpha=0.2,color='green')
+plt.axhline(max_6x, color='dimgray', linestyle='--')
+plt.axhline(min_6x, color='dimgray', linestyle='--')
+plt.text(15, max_6x, f'$6\sigma$: {max_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
+plt.text(15, min_6x, f'$6\sigma$: {min_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
+plt.xlabel('Turn')
+plt.ylabel('x [mm]')
+plt.legend(loc='lower right')
+plt.show()
 
-# plt.figure()
-# plt.title('6$\sigma_x$')
-# plt.plot(turn,x_1, label='x_entry')
-# plt.plot(turn,x_2, label='x_exit')
-# plt.fill_between(turn, x_1 - 6*std_x_1, x_1 + 6*std_x_1, alpha=0.2, color='blue')
-# plt.fill_between(turn, x_2 - 6 * std_x_2, x_2 + 6 * std_x_2, alpha=0.2, color='orange')
-# plt.axhline(max_6x, color='dimgray', linestyle='--')
-# plt.axhline(min_6x, color='dimgray', linestyle='--')
-# plt.text(15, max_6x, f'$6\sigma$: {max_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
-# plt.text(15, min_6x, f'$6\sigma$: {min_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
-# plt.xlabel('Turn')
-# plt.ylabel('x [mm]')
-# plt.legend(loc='lower right')
-# plt.show()
+plt.figure()
+plt.title('3$\sigma_x$')
+plt.plot(turn,x_1, label='x_entry')
+plt.plot(turn,x_2, label='x_exit')
+plt.plot(turn,x_3, label='x_mid')
+plt.fill_between(turn, x_1 - 3*std_x_1, x_1 + 3*std_x_1, alpha=0.2, color='blue')
+plt.fill_between(turn, x_2 - 3 * std_x_2, x_2 + 3 * std_x_2, alpha=0.2, color='orange')
+plt.fill_between(turn, x_3 - 3 * std_x_3, x_3 + 3 * std_x_3, alpha=0.2,color='green')
+plt.axhline(max_3x, color='k', linestyle='--')
+plt.axhline(min_3x, color='k', linestyle='--')
+plt.text(15, max_3x, f'$3\sigma$: {max_3x:.2f} mm', va='bottom', ha='right', color='k')
+plt.text(15, min_3x, f'$3\sigma$: {min_3x:.2f} mm', va='bottom', ha='right', color='k')
+plt.xlabel('Turn')
+plt.ylabel('x [mm]')
+plt.legend(loc='lower right')
+plt.show()
 
-# plt.figure()
-# plt.plot(turn,y_1, label='y_entry')
-# plt.plot(turn,y_2, label='y_exit')
-# plt.fill_between(turn, y_1 - 3*std_y_1, y_1 + 3*std_y_1, alpha=0.2, color='blue')
-# plt.fill_between(turn, y_2 - 3 * std_y_2, y_2 + 3 * std_y_2, alpha=0.2, color='orange')
-# plt.axhline(max_3y, color='k', linestyle='--')
-# plt.axhline(min_3y, color='k', linestyle='--')
-# plt.axhline(max_6y, color='dimgray', linestyle='--')
-# plt.axhline(min_6y, color='dimgray', linestyle='--')
-# plt.fill_between(turn, y_1 - 6*std_y_1, y_1 + 6*std_y_1, alpha=0.1, color='blue')
-# plt.fill_between(turn, y_2 - 6 * std_y_2, y_2 + 6 * std_y_2, alpha=0.1, color='orange')
-# plt.text(15, max_3y, f'$3\sigma$: {max_3y:.2f} mm', va='bottom', ha='right', color='k')
-# plt.text(15, min_3y, f'$3\sigma$: {min_3y:.2f} mm', va='bottom', ha='right', color='k')
-# plt.text(15, max_6y, f'$6\sigma$: {max_6y:.2f} mm', va='bottom', ha='right', color='dimgray')
-# plt.text(15, min_6y, f'$6\sigma$: {min_6y:.2f} mm', va='bottom', ha='right', color='dimgray')
-# plt.xlabel('Turn')
-# plt.ylabel('y [mm]')
-# plt.legend(loc='lower right')
-# plt.show()
+plt.figure()
+plt.title('6$\sigma_x$')
+plt.plot(turn,x_1, label='x_entry')
+plt.plot(turn,x_2, label='x_exit')
+plt.plot(turn,x_3, label='x_mid')
+plt.fill_between(turn, x_1 - 6*std_x_1, x_1 + 6*std_x_1, alpha=0.2, color='blue')
+plt.fill_between(turn, x_2 - 6 * std_x_2, x_2 + 6 * std_x_2, alpha=0.2, color='orange')
+plt.fill_between(turn, x_3 - 6 * std_x_3, x_3 + 6 * std_x_3, alpha=0.2,color='green')
+plt.axhline(max_6x, color='dimgray', linestyle='--')
+plt.axhline(min_6x, color='dimgray', linestyle='--')
+plt.text(15, max_6x, f'$6\sigma$: {max_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
+plt.text(15, min_6x, f'$6\sigma$: {min_6x:.2f} mm', va='bottom', ha='right', color='dimgray')
+plt.xlabel('Turn')
+plt.ylabel('x [mm]')
+plt.legend(loc='lower right')
+plt.show()
+
+plt.figure()
+plt.plot(turn,y_1, label='y_entry')
+plt.plot(turn,y_2, label='y_exit')
+plt.plot(turn,y_3, label='y_mid')
+plt.fill_between(turn, y_1 - 3*std_y_1, y_1 + 3*std_y_1, alpha=0.2, color='blue')
+plt.fill_between(turn, y_2 - 3 * std_y_2, y_2 + 3 * std_y_2, alpha=0.2, color='orange')
+plt.fill_between(turn, y_3 - 3 * std_y_3, y_3 + 3 * std_y_3, alpha=0.2,color='green')
+plt.axhline(max_3y, color='k', linestyle='--')
+plt.axhline(min_3y, color='k', linestyle='--')
+plt.axhline(max_6y, color='dimgray', linestyle='--')
+plt.axhline(min_6y, color='dimgray', linestyle='--')
+plt.fill_between(turn, y_1 - 6*std_y_1, y_1 + 6*std_y_1, alpha=0.1, color='blue')
+plt.fill_between(turn, y_2 - 6 * std_y_2, y_2 + 6 * std_y_2, alpha=0.1, color='orange')
+plt.fill_between(turn, y_3 - 6 * std_y_3, y_3 + 6 * std_y_3, alpha=0.1,color='green')
+plt.text(15, max_3y, f'$3\sigma$: {max_3y:.2f} mm', va='bottom', ha='right', color='k')
+plt.text(15, min_3y, f'$3\sigma$: {min_3y:.2f} mm', va='bottom', ha='right', color='k')
+plt.text(15, max_6y, f'$6\sigma$: {max_6y:.2f} mm', va='bottom', ha='right', color='dimgray')
+plt.text(15, min_6y, f'$6\sigma$: {min_6y:.2f} mm', va='bottom', ha='right', color='dimgray')
+plt.xlabel('Turn')
+plt.ylabel('y [mm]')
+plt.legend(loc='lower right')
+plt.show()

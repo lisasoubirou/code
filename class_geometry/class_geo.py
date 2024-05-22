@@ -26,6 +26,7 @@ from pathlib import Path
 class Geometry:
     default_values = {
     "C": 5990,
+    "t_acc": 0.34e-3,
     "E_inj": 	63e9,
     "E_ext": 	300e9,
     "t_inj": 0,

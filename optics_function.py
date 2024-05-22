@@ -21,7 +21,7 @@ plt.rc('xtick', labelsize=11)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=11)    # fontsize of the tick labels
 plt.rc('legend', fontsize=12)    # legend fontsize
 
-def make_optics(file_input,time_frac,n_slice,option):
+def make_optics (file_input,time_frac,n_slice,option,return_cell='line_ds'):
     RCS = Geometry(file_input)
     print('Input file', file_input)
     time=time_frac
@@ -62,13 +62,12 @@ def make_optics(file_input,time_frac,n_slice,option):
     volt_arc=energy_increment_per_arc/np.sin(phase*np.pi/180)
     volt_cav=volt_arc/n_cav_arc
 
-    #Define elements
+    #Define elements: drifts, quads, sextupoles
     mu=np.pi/2 #Phase advance 
     f=RCS.cell_length/(4*np.sin(mu/2)) #Focusing strength of quadrupole
     drift_qd=xt.Drift(length=Lqd)
     drift_dd=xt.Drift(length=L_dd_path[1])
     drift_s=xt.Drift(length=Ls/2)
-    drift_s_sxt=xt.Drift(length=Ls/2-Lqd)
     drift_r=xt.Drift(length=Lins/2/2)
 
     quad_f=xt.Multipole(knl=[0., 1/f], ksl=[0., 0.])
@@ -85,11 +84,14 @@ def make_optics(file_input,time_frac,n_slice,option):
     sxt_d=xt.Multipole(knl=[0., 0.,s_d], ksl=[0., 0.,0.])
     sxt_f=xt.Multipole(knl=[0., 0.,s_f], ksl=[0., 0.,0.])
 
+    step_quad=1e-8
+    step_sxt=1e-5
+
+    #Cavity settings
     V=0
     freq=0
     phi=0
     cavity=xt.Cavity(voltage=V, frequency=freq, lag=phi)
-    # RF_acc=xt.ReferenceEnergyIncrease(Delta_p0c=energy_increment_per_arc/n_cav_arc)
     RF_acc=xt.ReferenceEnergyIncrease(Delta_p0c=0)
     dz_acc=xt.ZetaShift(dzeta=0)
 
@@ -136,8 +138,6 @@ def make_optics(file_input,time_frac,n_slice,option):
     
     # If we want edges
     eps=RCS.epsilon(t_ref)
-    # eps=epsilon
-    # hn=RCS.hn(0)
     hn=list_hn
     model='full'
     en1=xt.DipoleEdge(k=hn[0], e1=-eps[0], side='entry',model = model)
@@ -148,8 +148,10 @@ def make_optics(file_input,time_frac,n_slice,option):
     ex3=xt.DipoleEdge(k=hn[2], e1=eps[3], side='exit',model =model)
 
     cell=[drift_qd]+[en1,BSC,ex1]+ [drift_dd]+ [en2, BNC,ex2]+ [drift_dd]+[en3, BSC,ex3]+[drift_qd]
+    # cell=[drift_qd]+[BSC]+ [drift_dd]+ [ BNC]+ [drift_dd]+[ BSC]+[drift_qd] #without edeges
     cell_name=['drift_qd']+['en1','BSC','ex1']+ ['drift_dd']+ ['en2', 'BNC','ex2']+ ['drift_dd']+['en3','BSC','ex3']+['drift_qd']
-       
+    # cell_name=['drift_qd']+['BSC']+ ['drift_dd']+ [ 'BNC']+ ['drift_dd']+['BSC']+['drift_qd'] #without edeges
+
     FODO_elements=[quad_f,drift_s]+cell+[drift_s, quad_d,drift_s]+cell+[drift_s]
     FODO_names=['quad_f','drift_s']+cell_name+['drift_s', 'quad_d','drift_s']+cell_name+['drift_s']
 
@@ -158,18 +160,17 @@ def make_optics(file_input,time_frac,n_slice,option):
         element_names=cell_name)
     line_cell.particle_ref = xp.Particles(p0c=energy, #eV
                                         q0=1, mass0=xp.MUON_MASS_EV)
-    line_cell.config.XTRACK_USE_EXACT_DRIFTS = True
     if n_slice > 0:
         line_cell.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
-
+    if return_cell=='line_cell':
+        return (line_cell)
 
     line_FODO=xt.Line(
         elements=FODO_elements,
         element_names=FODO_names)
     line_FODO.particle_ref = xp.Particles(p0c=energy, #eV
                                         q0=1, mass0=xp.MUON_MASS_EV)
-    line_FODO.config.XTRACK_USE_EXACT_DRIFTS = True
-
+    
     tw_FODO = line_FODO.twiss(method='4d') 
     betx_qd_fodo=tw_FODO['betx', 'quad_d']
     bety_qd_fodo=tw_FODO['bety', 'quad_d'] 
@@ -177,7 +178,6 @@ def make_optics(file_input,time_frac,n_slice,option):
     betx_qf_fodo=tw_FODO['betx', 'quad_f']
     bety_qf_fodo=tw_FODO['bety', 'quad_f'] 
     dx_qf_fodo=tw_FODO['dx', 'quad_f'] 
-    # plot_twiss(tw_FODO,line_FODO)
 
     #Transfer
     tr_elements= [beg]+[quad_f1 ,drift_s]+cell+[drift_s, quad_d1,drift_s]+cell+[drift_s,quad_f2,drift_s
@@ -191,7 +191,6 @@ def make_optics(file_input,time_frac,n_slice,option):
         element_names=tr_names)
     line_tr.particle_ref = xp.Particles(p0c=energy, #eV
                                         q0=1, mass0=xp.MUON_MASS_EV)
-    line_tr.config.XTRACK_USE_EXACT_DRIFTS = True
 
     #Matches FODO lattices to the transfer line: on first quad of the transfer == output optics of FODO
     tw_init_FODO = tw_FODO.get_twiss_init(0)
@@ -222,7 +221,7 @@ def make_optics(file_input,time_frac,n_slice,option):
                 end='_end_point', 
                 init=tw_init_FODO,
                 vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
-                                step=1e-8,
+                                step=step_quad,
                                 tag='quad'),
                 targets=[xt.TargetSet(dx=0,dpx=0,alfx=0,alfy=0, at='end',tol=1e-9)],
                 # verbose=True
@@ -267,7 +266,6 @@ def make_optics(file_input,time_frac,n_slice,option):
 
     line_ds.particle_ref = xp.Particles(p0c=energy, #eV
                                         q0=1, mass0=xp.MUON_MASS_EV)
-    line_ds.config.XTRACK_USE_EXACT_DRIFTS = True
     if n_slice > 0:
         line_ds.slice_thick_elements(slicing_strategies=[xt.Strategy(slicing=xt.Teapot(n_slice))])
 
@@ -304,22 +302,22 @@ def make_optics(file_input,time_frac,n_slice,option):
     line_ds.element_refs['sxt_d_2'].knl[2] = line_ds.vars['s_d']
     line_ds.element_refs['sxt_f_2'].knl[2] = line_ds.vars['s_f']
 
-    match_ds_4d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
-                                step=1e-8,
-                                tag='quad'),
-                targets=[
-                        xt.Target(tar='dx', at='end', value=0., tol=1e-9,tag='DS'),
-                        xt.TargetSet(betx=betx_qd_fodo,bety=bety_qd_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
-                        xt.TargetSet(qx=2.6067, qy=2.252, tol=1e-3, tag='tune')
-                        ],
-                # solve=False,
-                method='4d',
-                # verbose=True
-                )
+    # match_ds_4d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
+    #                             step=step_quad,
+    #                             tag='quad'),
+    #             targets=[
+    #                     xt.Target(tar='dx', at='end', value=0., tol=1e-9,tag='DS'),
+    #                     xt.TargetSet(betx=betx_qd_fodo,bety=bety_qd_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
+    #                     xt.TargetSet(qx=2.6067, qy=2.252, tol=1e-3, tag='tune')
+    #                     ],
+    #             # solve=False,
+    #             method='4d',
+    #             # verbose=True
+    #             )
 
-    print('MATCHING QUAD DS 4D')
-    match_ds_4d.target_status()
-    match_ds_4d.vary_status()
+    # print('MATCHING QUAD DS 4D')
+    # match_ds_4d.target_status()
+    # match_ds_4d.vary_status()
     tw_ds_4d=line_ds.twiss( method='4d')
 
     #Import line to json
@@ -343,7 +341,7 @@ def make_optics(file_input,time_frac,n_slice,option):
     line_ds.build_tracker()
 
     match_ds_6d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
-                                step=1e-8,
+                                step=step_quad,
                                 tag='quad'),
                 targets=[xt.TargetSet(dx=0, at='end', tol=1e-9,tag='DS'),
                         # xt.TargetSet(betx=betx_fodo,bety=bety_fodo,dx=dx_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
@@ -357,7 +355,7 @@ def make_optics(file_input,time_frac,n_slice,option):
     match_ds_6d.vary_status()
 
     match_ds_6d_sxt=line_ds.match(vary=xt.VaryList(['s_d','s_f'],
-                            step=1e-5,
+                            step=step_sxt,
                             tag='sxt'),
                 targets=[
                     # xt.TargetSet(qx=2.60, qy=2.23, tol=1e-6, tag='tune'),
@@ -382,8 +380,9 @@ def make_optics(file_input,time_frac,n_slice,option):
     print('Qy', round(tw_ds_6d['qy'], 5))
     print('dqx', round(tw_ds_6d['dqx'], 2))
     print('dqy', round(tw_ds_6d['dqy'], 2))
-
-    return(line_cell,line_ds)#,line_ds)#tw_ds_4d,tw_ds_6d) 
+    if return_cell=='both':
+        return (line_cell,line_ds)
+    return(line_ds)
 
 def plot_twiss(tw,line):
     tab=line.get_table()
@@ -466,20 +465,20 @@ if __name__ == "__main__":
     #Call class_geo
     file_input='/mnt/c/muco/code/class_geometry/para_RCS_ME.txt'
     RCS = Geometry(file_input)
-    t_frac=1
-    n_k=21
+    t_frac=0
+    n_k=0
     method='var_ref'
 
-    line_cell,line_ds= make_optics(file_input,t_frac,n_k,method) 
-    survey_cell=line_cell.survey(theta0=RCS.cell_angle/4)
-    rec_cell=track(line_cell,var=False)
+    line_cell,line_ds= make_optics(file_input,t_frac,n_k,method,return_cell='both')
+    # survey_cell=line_cell.survey(theta0=RCS.cell_angle/4)
+    # rec_cell=track(line_cell,var=False)
     # tw_4d=line_ds.twiss(method='4d')
-    # tw_6d=line_ds.twiss(method='6d', matrix_stability_tol=5e-3)
+    tw_6d=line_ds.twiss(method='6d', matrix_stability_tol=5e-3)
     # plot_twiss_single(tw_4d)
     # plot_twiss_single(tw_6d)
     # plot_twiss_diff(tw_6d,tw_4d,line_ds)
 
-    nb_arc=26
+    # nb_arc=26
     # plt.figure()
     # plt.plot(tw_ds.s,tw_ds.zeta*1e3)
     # plt.xlabel('s [m]')
