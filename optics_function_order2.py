@@ -6,6 +6,7 @@ Created on Wed Jan  3 13:10:16 2024
 """
 
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 import xobjects as xo
 import xtrack as xt
@@ -104,9 +105,12 @@ cavity=xt.Cavity(voltage=V, frequency=freq, lag=phi)
 RF_acc=xt.ReferenceEnergyIncrease(Delta_p0c=0)
 dz_acc=xt.ZetaShift(dzeta=0)
 
-#Goal chroma
+#Goal tune and chroma
+qx_goal=2.6067
+qy_goal=2.252
 dqx_goal_arc=5/nb_arc
 dqy_goal_arc=5/nb_arc
+
 
 #Define dipoles 
 if option == 'var_ref':
@@ -259,14 +263,19 @@ line_ds=xt.Line(
     element_names=ds_names)
 
 tab_bf=line_ds.get_table()
-line_ds.insert_element('sxt_d_1',sxt_d,at_s=tab_bf['s','quad_d_2'])
-line_ds.insert_element('sxt_d_2',sxt_d,at_s=tab_bf['s','quad_d_4'])
-line_ds.insert_element('sxt_d_3',sxt_d,at_s=tab_bf['s','quad_d_5'])
-line_ds.insert_element('sxt_d_4',sxt_d,at_s=tab_bf['s','quad_d_7'])
-line_ds.insert_element('sxt_f_1',sxt_f,at_s=tab_bf['s','quad_f_1'])
-line_ds.insert_element('sxt_f_2',sxt_f,at_s=tab_bf['s','quad_f_3'])
-line_ds.insert_element('sxt_f_3',sxt_f,at_s=tab_bf['s','quad_f_5'])
-line_ds.insert_element('sxt_f_4',sxt_f,at_s=tab_bf['s','quad_f_7'])
+for el in tab_bf.rows['quad.*'].name[3:-3]:
+    if 'quad_d_' in el:
+        line_ds.insert_element('sxt_d_'+el[-1],sxt_d,at_s=tab_bf['s', el])
+    if 'quad_f' in el:
+        line_ds.insert_element('sxt_f_'+el[-1],sxt_f,at_s=tab_bf['s', el])
+# line_ds.insert_element('sxt_d_1',sxt_d,at_s=tab_bf['s','quad_d_1'])
+# line_ds.insert_element('sxt_d_2',sxt_d,at_s=tab_bf['s','quad_d_3'])
+# line_ds.insert_element('sxt_d_3',sxt_d,at_s=tab_bf['s','quad_d_6'])
+# line_ds.insert_element('sxt_d_4',sxt_d,at_s=tab_bf['s','quad_d_8'])
+# line_ds.insert_element('sxt_f_1',sxt_f,at_s=tab_bf['s','quad_f_1'])
+# line_ds.insert_element('sxt_f_2',sxt_f,at_s=tab_bf['s','quad_f_2'])
+# line_ds.insert_element('sxt_f_3',sxt_f,at_s=tab_bf['s','quad_f_3'])
+# line_ds.insert_element('sxt_f_4',sxt_f,at_s=tab_bf['s','quad_f_4'])
 line_ds.insert_element('RF_acc', RF_acc, at=2)
 line_ds.insert_element('RF_acc_1', RF_acc, at=-4)
 line_ds.insert_element('dz_acc', dz_acc, at=3)
@@ -287,8 +296,8 @@ line_ds.vars['k_f1'] = line_ds['quad_f_1'].knl[1]
 line_ds.vars['k_d2'] = line_ds['quad_d_1'].knl[1]
 line_ds.vars['k_f2'] = line_ds['quad_f'].knl[1]
 line_ds.vars['k_d3'] = line_ds['quad_d'].knl[1]
-line_ds.vars['s_d'] = -1/(f*0.5)*8
-line_ds.vars['s_f'] = 1/(f*0.25)*8
+# line_ds.vars['s_d'] = -1/(f*0.5)*8
+# line_ds.vars['s_f'] = 1/(f*0.25)*8
 
 #Attach knobs to elements
 line_ds.element_refs['quad_f_2'].knl[1] = line_ds.vars['k_f0']
@@ -305,10 +314,29 @@ line_ds.element_refs['quad_d_8'].knl[1] = line_ds.vars['k_d2']
 line_ds.element_refs['quad_f_8'].knl[1] = line_ds.vars['k_f2']
 line_ds.element_refs['quad_d_9'].knl[1] = line_ds.vars['k_d3']
 
-line_ds.element_refs['sxt_d_1'].knl[2] = line_ds.vars['s_d']
-line_ds.element_refs['sxt_f_1'].knl[2] = line_ds.vars['s_f']
-line_ds.element_refs['sxt_d_2'].knl[2] = line_ds.vars['s_d']
-line_ds.element_refs['sxt_f_2'].knl[2] = line_ds.vars['s_f']
+tab_sxt=line_ds.get_table()
+list_sd=tab_sxt.rows['sxt_d.*'].name
+list_sf=tab_sxt.rows['sxt_f.*'].name
+list_s=[]
+for i,sxt in enumerate(list_sd[0:math.ceil(len(list_sd)/2)]):
+        line_ds.vars['s_'+sxt[-3:]]=-1/(f*0.5)
+        line_ds.element_refs[sxt].knl[2] = line_ds.vars['s_'+sxt[-3:]]
+        line_ds.element_refs[list_sd[-i-1]].knl[2] = line_ds.vars['s_'+sxt[-3:]]
+        list_s.append('s_'+sxt[-3:])
+for i,sxt in enumerate(list_sf[0:math.ceil(len(list_sf)/2)]):
+        line_ds.vars['s_'+sxt[-3:]]=1/(f*0.25)
+        line_ds.element_refs[sxt].knl[2] = line_ds.vars['s_'+sxt[-3:]]
+        line_ds.element_refs[list_sf[-i-1]].knl[2] = line_ds.vars['s_'+sxt[-3:]]
+        list_s.append('s_'+sxt[-3:])
+
+# line_ds.element_refs['sxt_d_1'].knl[2] = line_ds.vars['s_d']
+# line_ds.element_refs['sxt_d_2'].knl[2] = line_ds.vars['s_d']
+# line_ds.element_refs['sxt_d_3'].knl[2] = line_ds.vars['s_d']
+# line_ds.element_refs['sxt_d_4'].knl[2] = line_ds.vars['s_d']
+# line_ds.element_refs['sxt_f_1'].knl[2] = line_ds.vars['s_f']
+# line_ds.element_refs['sxt_f_2'].knl[2] = line_ds.vars['s_f']
+# line_ds.element_refs['sxt_f_3'].knl[2] = line_ds.vars['s_f']
+# line_ds.element_refs['sxt_f_4'].knl[2] = line_ds.vars['s_f']
 
 # match_ds_4d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
 #                             step=step_quad,
@@ -353,7 +381,8 @@ match_ds_6d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','
                             tag='quad'),
             targets=[xt.TargetSet(dx=0, at='end', tol=1e-9,tag='DS'),
                     # xt.TargetSet(betx=betx_fodo,bety=bety_fodo,dx=dx_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
-                    xt.TargetSet(qx=2.6067, qy=2.252, tol=1e-6, tag='tune')],
+                    xt.TargetSet(qx=qx_goal, qy=qy_goal, tol=1e-6, tag='tune')
+                    ],
             method='6d',
             matrix_stability_tol=5e-3,
             # verbose=True
@@ -361,22 +390,49 @@ match_ds_6d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','
 print('MATCHING QUAD DS 6D')
 match_ds_6d.target_status()
 match_ds_6d.vary_status()
+tw = line_ds.twiss(method='4d')
+print(tw["qx"], tw["qy"])
+plt.plot(tw['s'], tw['betx'], "r-", label=r'$\beta_x$')
+plt.plot(tw['s'], tw['bety'], "b-", label=r'$\beta_y$')
+plt.legend()
+plt.show()
 
-match_ds_6d_sxt=line_ds.match(vary=xt.VaryList(['s_d','s_f'],
+match_ds_6d_sxt=line_ds.match(vary=xt.VaryList(list_s,
                         step=step_sxt,
                         tag='sxt'),
             targets=[
-                # xt.TargetSet(qx=2.60, qy=2.23, tol=1e-6, tag='tune'),
                     xt.TargetSet(dqx=dqx_goal_arc, dqy=dqy_goal_arc, tol=1e-6, tag='chroma')],
             solve=False,
             method='6d',
-            matrix_stability_tol=5e-3,
+             matrix_stability_tol=5e-3,
             # verbose=True
             )
 match_ds_6d_sxt.step(20)
 print('RESULTS SXT DS MATCH 6D')
 match_ds_6d_sxt.target_status()
 match_ds_6d_sxt.vary_status()
+
+match_ds_6d_chroma=line_ds.match(vary=[
+                    xt.VaryList(list_s, step=step_sxt, tag='sxt'),
+                    xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],step=step_quad, tag='quad')
+                    ],           
+            targets=[
+                    xt.TargetSet(dx=0, at='end', tol=1e-9,tag='DS'),
+                    xt.TargetSet(dqx=dqx_goal_arc, dqy=dqy_goal_arc, tol=1e-6, tag='chroma'),
+                    xt.TargetSet(qx=qx_goal, qy=qy_goal, tol=1e-6, tag='tune'),
+                    # xt.TargetSet(qx=1.928704490718697, qy=1.3653071034699813, tol=1e-6, tag='tune'),
+                    xt.TargetSet(bx_chrom=0., by_chrom=0., tol=1e-3, at='end', tag='B')
+                    ],
+            solve=False,
+            method='6d',
+            matrix_stability_tol=5e-3,
+            compute_chromatic_properties=True
+            # verbose=True
+            )
+match_ds_6d_chroma.step(50)
+print('RESULTS SXT DS MATCH 6D')
+match_ds_6d_chroma.target_status()
+match_ds_6d_chroma.vary_status()
 
 def plot_twiss_AB(tw,line):
     plt.figure()
