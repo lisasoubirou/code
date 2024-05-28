@@ -317,26 +317,38 @@ line_ds.element_refs['quad_d_9'].knl[1] = line_ds.vars['k_d3']
 tab_sxt=line_ds.get_table()
 list_sd=tab_sxt.rows['sxt_d.*'].name
 list_sf=tab_sxt.rows['sxt_f.*'].name
-list_s=[]
-for i,sxt in enumerate(list_sd[0:math.ceil(len(list_sd)/2)]):
-        line_ds.vars['s_'+sxt[-3:]]=-1/(f*0.5)
-        line_ds.element_refs[sxt].knl[2] = line_ds.vars['s_'+sxt[-3:]]
-        line_ds.element_refs[list_sd[-i-1]].knl[2] = line_ds.vars['s_'+sxt[-3:]]
-        list_s.append('s_'+sxt[-3:])
-for i,sxt in enumerate(list_sf[0:math.ceil(len(list_sf)/2)]):
-        line_ds.vars['s_'+sxt[-3:]]=1/(f*0.25)
-        line_ds.element_refs[sxt].knl[2] = line_ds.vars['s_'+sxt[-3:]]
-        line_ds.element_refs[list_sf[-i-1]].knl[2] = line_ds.vars['s_'+sxt[-3:]]
-        list_s.append('s_'+sxt[-3:])
+list_s=['s_d','s_d_1','s_f','s_f_1']
+# list_s=[]
+line_ds.vars['s_d']=-1/(f*0.25)
+line_ds.vars['s_d_1']=-1/(f*0.25)
+line_ds.vars['s_f']=1/(f*0.5)
+line_ds.vars['s_f_1']=1/(f*0.5)
 
-# line_ds.element_refs['sxt_d_1'].knl[2] = line_ds.vars['s_d']
-# line_ds.element_refs['sxt_d_2'].knl[2] = line_ds.vars['s_d']
-# line_ds.element_refs['sxt_d_3'].knl[2] = line_ds.vars['s_d']
-# line_ds.element_refs['sxt_d_4'].knl[2] = line_ds.vars['s_d']
-# line_ds.element_refs['sxt_f_1'].knl[2] = line_ds.vars['s_f']
-# line_ds.element_refs['sxt_f_2'].knl[2] = line_ds.vars['s_f']
-# line_ds.element_refs['sxt_f_3'].knl[2] = line_ds.vars['s_f']
-# line_ds.element_refs['sxt_f_4'].knl[2] = line_ds.vars['s_f']
+# for i,sxt in enumerate(list_sd[0:math.ceil(len(list_sd)/2)]):
+#         line_ds.vars['s_'+sxt[-3:]]=-1/(f*0.5)
+#         line_ds.element_refs[sxt].knl[2] = line_ds.vars['s_'+sxt[-3:]]
+#         line_ds.element_refs[list_sd[-i-1]].knl[2] = line_ds.vars['s_'+sxt[-3:]]
+#         list_s.append('s_'+sxt[-3:])
+# for i,sxt in enumerate(list_sf[0:math.ceil(len(list_sf)/2)]):
+#         line_ds.vars['s_'+sxt[-3:]]=1/(f*0.25)
+#         line_ds.element_refs[sxt].knl[2] = line_ds.vars['s_'+sxt[-3:]]
+#         line_ds.element_refs[list_sf[-i-1]].knl[2] = line_ds.vars['s_'+sxt[-3:]]
+#         list_s.append('s_'+sxt[-3:])
+
+line_ds.element_refs['sxt_d_2'].knl[2] = line_ds.vars['s_d']
+line_ds.element_refs['sxt_d_3'].knl[2] = line_ds.vars['s_d']
+line_ds.element_refs['sxt_d_4'].knl[2] = line_ds.vars['s_d_1']
+line_ds.element_refs['sxt_d_5'].knl[2] = line_ds.vars['s_d_1']
+line_ds.element_refs['sxt_d_6'].knl[2] = line_ds.vars['s_d']
+line_ds.element_refs['sxt_d_7'].knl[2] = line_ds.vars['s_d']
+
+line_ds.element_refs['sxt_f_1'].knl[2] = line_ds.vars['s_f']
+line_ds.element_refs['sxt_f_2'].knl[2] = line_ds.vars['s_f']
+line_ds.element_refs['sxt_f_3'].knl[2] = line_ds.vars['s_f']
+line_ds.element_refs['sxt_f_4'].knl[2] = line_ds.vars['s_f_1']
+line_ds.element_refs['sxt_f_5'].knl[2] = line_ds.vars['s_f']
+line_ds.element_refs['sxt_f_6'].knl[2] = line_ds.vars['s_f']
+line_ds.element_refs['sxt_f_7'].knl[2] = line_ds.vars['s_f']
 
 # match_ds_4d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],
 #                             step=step_quad,
@@ -382,6 +394,7 @@ match_ds_6d=line_ds.match(vary=xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','
             targets=[xt.TargetSet(dx=0, at='end', tol=1e-9,tag='DS'),
                     # xt.TargetSet(betx=betx_fodo,bety=bety_fodo,dx=dx_fodo, at='quad_d_3', tol=1e-9, tag='FODO'),
                     xt.TargetSet(qx=qx_goal, qy=qy_goal, tol=1e-6, tag='tune')
+                    # xt.TargetSet(qx=1.928704490718697, qy=1.3653071034699813, tol=1e-6, tag='tune')
                     ],
             method='6d',
             matrix_stability_tol=5e-3,
@@ -417,7 +430,7 @@ match_ds_6d_chroma=line_ds.match(vary=[
                     xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],step=step_quad, tag='quad')
                     ],           
             targets=[
-                    xt.TargetSet(dx=0, at='end', tol=1e-9,tag='DS'),
+                    xt.TargetSet(dx=0, at='end', tol=1e-6,tag='DS'),
                     xt.TargetSet(dqx=dqx_goal_arc, dqy=dqy_goal_arc, tol=1e-6, tag='chroma'),
                     xt.TargetSet(qx=qx_goal, qy=qy_goal, tol=1e-6, tag='tune'),
                     # xt.TargetSet(qx=1.928704490718697, qy=1.3653071034699813, tol=1e-6, tag='tune'),
@@ -429,7 +442,7 @@ match_ds_6d_chroma=line_ds.match(vary=[
             compute_chromatic_properties=True
             # verbose=True
             )
-match_ds_6d_chroma.step(50)
+match_ds_6d_chroma.step(60)
 print('RESULTS SXT DS MATCH 6D')
 match_ds_6d_chroma.target_status()
 match_ds_6d_chroma.vary_status()
@@ -487,7 +500,6 @@ tw_6d=line_ds.twiss(method='6d', matrix_stability_tol=5e-3,
 plot_twiss(tw_6d, line_ds)
 plot_twiss_WD(tw_6d,line_ds)
 plot_twiss_AB(tw_6d,line_ds)
-
 
 # line_ds.to_json('lattice_disp_suppr_6d.json')
 
