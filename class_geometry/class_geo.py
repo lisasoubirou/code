@@ -96,9 +96,7 @@ class Geometry:
         self.inj_gamma = self.E_inj/self.muon_mass
         self.ext_gamma = self.E_ext/self.muon_mass
         self.inj_Brho = np.sqrt(self.inj_gamma**2-1)*self.muon_mass/cons.c  #Magnetic rigidity at inj
-        self.ext_Brho = np.sqrt(self.ext_gamma**2-1)*self.muon_mass/cons.c  #Magnetic rigidity at ext
-        self.rev_time = self.C/cons.c
-        self.rev_freq = 1./self.rev_time        
+        self.ext_Brho = np.sqrt(self.ext_gamma**2-1)*self.muon_mass/cons.c  #Magnetic rigidity at ext      
         self.tot_arc_length = self.filling_ratio*self.C
         self.tot_insertion_length = self.C-self.tot_arc_length
         self.arc_length = self.tot_arc_length/self.nb_arc

@@ -41,7 +41,7 @@ t_ref=0.5
 t_acc=1.09704595*1e-3
 n_part=5000
 
-file_input='/mnt/c/muco/code/class_geometry/para_RCS_ME.txt'
+file_input='/mnt/c/muco/code/class_geometry/para_RCS_LHC.txt'
 RCS = Geometry(file_input)
 C=RCS.C
 nb_arc=RCS.nb_arc
