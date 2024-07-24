@@ -186,7 +186,6 @@ class Geometry:
         func_Brho : Args: x (float): time
                     Returns: Magnetic rigidity
         nc_best : optimised # of cells per arc, if nb_cell_arc > nc_best : nb_cell_arc = nc_best
-        QP_dipole_spacing : spacing between dipole and quadrupole
         """        
         self.e0 = np.sin(self.cell_angle/4)
         #Isomagnetic case, only 1 family of dipole (normal conducting RCS)
@@ -253,11 +252,12 @@ class Geometry:
                 self.L0*self.dipole_families[key]["B"](x)/self.func_Brho(x)/2/self.e0 for key in (self._pattern)])
             self.list_b = lambda x:np.where(np.abs(self.list_ba(x))<1e-8, 1e-8, self.list_ba(x)) #To find a solution when Bnc=0
         
-        self.QP_dipole_spacing = ( #Spacing between quad and dipole
-            self.cell_length/2-self.L0-(len(self._pattern)-1)*self._dipole_spacing-self._LSSS)/2.
+        # self.QP_dipole_spacing = ( #Spacing between quad and dipole
+        #     self.cell_length/2-self.L0-(len(self._pattern)-1)*self._dipole_spacing-self._LSSS)/2.
         self.nc_best = int((self.arc_length-self.dipole_length_tot/self._nb_arc)/(
-            (len(self._pattern)-1)*self._dipole_spacing+self._LSSS)/2) #Optimised nb_cell_arc
-        # Number of cells per arc may have to be optimised, or could get negative length of QP_dipole_spacing 
+            (len(self._pattern)+1)*self._dipole_spacing+self._LSSS)/2) #Optimised nb_cell_arc
+        
+        # Number of cells per arc may have to be optimised, or could get unphysical geometry
         if self._nb_cell_arc > self.nc_best:
             if self.nc_best <=0:
                 raise ValueError("Optimum number of cells is negative: unphysical solution. Check input parameters.")
@@ -407,6 +407,16 @@ class Geometry:
         self.reinit_all()
 
     @property
+    def L_extra_rcs(self) -> float:
+        """Extra length left for the rcs after computing the cell length"""
+        return self.tot_arc_length-self.dipole_length_tot-2*self.nb_cell_rcs*(self.nd+1)*self.dipole_spacing-self.LSSS*2*self.nb_cell_rcs
+    
+    @property
+    def L_extra_arc(self) -> float:
+        """Extra length left for one arc after computing the cell length"""
+        return self.L_extra_rcs/self.nb_arc
+
+    @property
     def inj_gamma(self) -> float:
         """Injection gamma"""
         return self._E_inj/self.muon_mass
@@ -532,7 +542,7 @@ class Geometry:
         Returns: float
         """
         ee = self.epsilon(x)
-        return(self.QP_dipole_spacing/np.cos(ee[0]))
+        return(self._dipole_spacing/np.cos(ee[0]))
         
     def dz_(self, x):
         """ Deviation of position in dipole. Function defined to compute z_dipole (see below). 
@@ -606,8 +616,8 @@ class Geometry:
         z_b=self.z_begin(x)
         bb=self.list_b(x)
         z = np.zeros((self.nsub + 1) * self.nd + 2, dtype=complex)
-        z[1] = (0.5*self._LSSS+self.QP_dipole_spacing)/np.cos(eps[0])*np.exp(1j*eps[0])
-        # z[1] = (self.QP_dipole_spacing)/np.cos(eps[0])*np.exp(1j*eps[0])
+        z[1] = (0.5*self._LSSS+self._dipole_spacing)/np.cos(eps[0])*np.exp(1j*eps[0])
+        # z[1] = (self._dipole_spacing)/np.cos(eps[0])*np.exp(1j*eps[0])
         dc =  np.linspace(0., 1., self.nsub+1)
         for n in np.arange(self.nd):
             e0 = eps[n]
@@ -617,8 +627,8 @@ class Geometry:
             i0 = 1 + n*(self.nsub+1)
             z0 = z[1]+z_b[n]
             z[i0:i0+self.nsub+1] = z0+self.Ln[n]*dc+1j*self.rho*cc
-        z[-1] = z[-2] + (0.5*self._LSSS+self.QP_dipole_spacing)/np.cos(eps[-1])*np.exp(1j*eps[-1])
-        # z[-1] = z[-2] + (self.QP_dipole_spacing)/np.cos(eps[-1])*np.exp(1j*eps[-1])
+        z[-1] = z[-2] + (0.5*self._LSSS+self._dipole_spacing)/np.cos(eps[-1])*np.exp(1j*eps[-1])
+        # z[-1] = z[-2] + (self._dipole_spacing)/np.cos(eps[-1])*np.exp(1j*eps[-1])
         return(z)
 
     def y_begin(self, x): 
@@ -689,7 +699,7 @@ class Geometry:
         e1 = ee[1:]
         e0 = ee[:-1]
         ang = e0-e1
-        path_length = np.sum(ang/self.hn(x))+self._dipole_spacing*np.sum(1/np.cos(e1[:-1]))+(self._LSSS+2*self.QP_dipole_spacing)/np.cos(e0[0])
+        path_length = np.sum(ang/self.hn(x))+self._dipole_spacing*np.sum(1/np.cos(e1[:-1]))+(self._LSSS+2*self._dipole_spacing)/np.cos(e0[0])
         return(path_length)
         
     def path_length_tot(self,x):   
@@ -711,14 +721,14 @@ class Geometry:
     def max_path_diff(self):
         """Maximum path length difference from t_inj to t_ext"""
         result = minimize_scalar(self.path_length_tot, method="bounded",
-                                 bounds=(self.t_inj-0.1,self.t_ext))
+                                 bounds=(self.t_inj,self.t_ext))
         min_path=result.fun
         f= lambda x: -self.path_length_tot(x)
         result_max = minimize_scalar(f, method="bounded",
                                  bounds=(self.t_inj,self.t_ext))
         return -result_max.fun-min_path
 
-    def plot_traj(self, t_traj):
+    def plot_traj(self, t_traj=np.linspace(0,1,8)):
         """ Plots the trajectory for a given time between t_inj and t_ext.
         Args:
             t_traj (list): time for each trajectory
@@ -729,7 +739,7 @@ class Geometry:
         zmin = np.min(np.imag(self.zn(1)))
         zmax = np.max(np.imag(self.zn(1)))
         dz = zmax - zmin
-        zloc = (0.5*self._LSSS+self.QP_dipole_spacing)
+        zloc = (0.5*self._LSSS+self._dipole_spacing)
         iz = 1
         for z1, z2 in zip(self.z_begin(1), self.z_end(1)):
             x1, x2 = np.real(z1), np.real(z2)

@@ -12,8 +12,9 @@ import xobjects as xo
 import xtrack as xt
 import xpart as xp
 import sys
-sys.path.append('/mnt/c/muco')
-from class_geometry.class_geo import Geometry 
+sys.path.append('/mnt/c/muco/mhega/rcsparameters/rcsparameters')
+sys.path.append('/mnt/c/muco/code')
+from geometry.geometry import Geometry 
 from track_function import track
 from optics_function import plot_twiss, plot_twiss_single
 import json
@@ -23,7 +24,7 @@ plt.rc('xtick', labelsize=11)    # fontsize of the tick labels
 plt.rc('ytick', labelsize=11)    # fontsize of the tick labels
 plt.rc('legend', fontsize=12)    # legend fontsize
 
-file_input='/mnt/c/muco/code/class_geometry/para_RCS_ME.txt'
+file_input='/mnt/c/muco/code/class_geometry/parameter_files/para_RCS_ME.txt'
 time_frac=0
 n_slice=0
 option='var_ref'
@@ -33,8 +34,7 @@ print('Input file', file_input)
 time=time_frac
 t_ref=0.5
 energy=RCS.E_inj+(RCS.E_ext-RCS.E_inj)*time_frac
-frequency_rf=RCS.RF_freq
-
+frequency_rf=1300e6
 print('Time', time)
 print('Energy', energy)
 
@@ -54,7 +54,7 @@ L_dip_path=RCS.L_dip_path(time)
 L_dip_path_ref=RCS.L_dip_path(t_ref)
 theta_ref=RCS.theta(t_ref)
 pattern=RCS.pattern 
-nb_cell_tot=RCS.nb_cell_arcs
+nb_cell_tot=RCS.nb_cell_rcs
 nb_arc=RCS.nb_arc
 n_cav_arc=2
 
@@ -425,27 +425,27 @@ print('RESULTS SXT DS MATCH 6D')
 match_ds_6d_sxt.target_status()
 match_ds_6d_sxt.vary_status()
 
-match_ds_6d_chroma=line_ds.match(vary=[
-                    xt.VaryList(list_s, step=step_sxt, tag='sxt'),
-                    xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],step=step_quad, tag='quad')
-                    ],           
-            targets=[
-                    xt.TargetSet(dx=0, at='end', tol=1e-6,tag='DS'),
-                    xt.TargetSet(dqx=dqx_goal_arc, dqy=dqy_goal_arc, tol=1e-6, tag='chroma'),
-                    xt.TargetSet(qx=qx_goal, qy=qy_goal, tol=1e-6, tag='tune'),
-                    # xt.TargetSet(qx=1.928704490718697, qy=1.3653071034699813, tol=1e-6, tag='tune'),
-                    xt.TargetSet(bx_chrom=0., by_chrom=0., tol=1e-3, at='end', tag='B')
-                    ],
-            solve=False,
-            method='6d',
-            matrix_stability_tol=5e-3,
-            compute_chromatic_properties=True
-            # verbose=True
-            )
-match_ds_6d_chroma.step(60)
-print('RESULTS SXT DS MATCH 6D')
-match_ds_6d_chroma.target_status()
-match_ds_6d_chroma.vary_status()
+# match_ds_6d_chroma=line_ds.match(vary=[
+#                     xt.VaryList(list_s, step=step_sxt, tag='sxt'),
+#                     xt.VaryList(['k_f0','k_d1','k_f1','k_d2','k_f2','k_d3'],step=step_quad, tag='quad')
+#                     ],           
+#             targets=[
+#                     xt.TargetSet(dx=0, at='end', tol=1e-6,tag='DS'),
+#                     xt.TargetSet(dqx=dqx_goal_arc, dqy=dqy_goal_arc, tol=1e-6, tag='chroma'),
+#                     xt.TargetSet(qx=qx_goal, qy=qy_goal, tol=1e-6, tag='tune'),
+#                     # xt.TargetSet(qx=1.928704490718697, qy=1.3653071034699813, tol=1e-6, tag='tune'),
+#                     xt.TargetSet(bx_chrom=0., by_chrom=0., tol=1e-3, at='end', tag='B')
+#                     ],
+#             solve=False,
+#             method='6d',
+#             matrix_stability_tol=5e-3,
+#             compute_chromatic_properties=True
+#             # verbose=True
+#             )
+# match_ds_6d_chroma.step(60)
+# print('RESULTS SXT DS MATCH 6D')
+# match_ds_6d_chroma.target_status()
+# match_ds_6d_chroma.vary_status()
 
 def plot_twiss_AB(tw,line):
     plt.figure()
@@ -500,6 +500,26 @@ tw_6d=line_ds.twiss(method='6d', matrix_stability_tol=5e-3,
 plot_twiss(tw_6d, line_ds)
 plot_twiss_WD(tw_6d,line_ds)
 plot_twiss_AB(tw_6d,line_ds)
+
+tw=tw_6d
+plt.rc('legend', fontsize=10)    # legend fontsize
+
+fig1 = plt.figure(1, figsize=(6.4, 4.8*1.5))
+spbet = plt.subplot(2,1,1)
+spdisp = plt.subplot(2,1,2, sharex=spbet)
+
+spbet.plot(tw.s, tw.betx, label=r'$\beta_x$')
+spbet.plot(tw.s, tw.bety,label=r'$\beta_y$')
+spbet.set_ylabel(r'$\beta_{x,y}$ [m]')
+spbet.legend()
+
+# spbet.legend()
+spdisp.plot(tw.s, tw.dx,label=r'$D_x')
+spdisp.plot(tw.s, tw.dy,label=r'$D_y$')
+spdisp.set_ylabel(r'$D_{x,y}$ [m]')
+spdisp.legend()
+fig1.subplots_adjust(left=.15, right=.92, hspace=.27)
+plt.show()
 
 # line_ds.to_json('lattice_disp_suppr_6d.json')
 
