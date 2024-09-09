@@ -56,8 +56,7 @@ def eval_horner(coefficients, x):
         y = y * x + coeff
     return y
 
-def calc_dip_coef(file_input,t_ref):
-    RCS = Geometry(file_input)
+def calc_dip_coef(RCS,t_ref):
     pattern=RCS.pattern 
     i_BNC=pattern.index('BNC')
     i_BSC=pattern.index('BSC')

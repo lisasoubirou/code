@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 sys.path.append('/mnt/c/muco/rcsparameters/rcsparameters')
-from geometry.geometry import Geometry
+from rcsparameters.geometry.geometry import Geometry
 
 file_input='/mnt/c/muco/code/class_geometry/parameter_files/para_RCS_LHC.txt'
 RCS = Geometry(file_input)

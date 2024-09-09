@@ -92,7 +92,7 @@ i_BSC=pattern.index('BSC')
 
 line.vars['t_turn_s']=0.
 
-coef=calc_dip_coef(file_input,t_ref)
+coef=calc_dip_coef(RCS,t_ref)
 line.functions.h_nc_pol= lambda x: eval_horner(coef[0],x)
 line.functions.h_sc_pol= lambda x: eval_horner(coef[1],x)
 line.functions.l_nc_pol= lambda x: eval_horner(coef[2],x)
